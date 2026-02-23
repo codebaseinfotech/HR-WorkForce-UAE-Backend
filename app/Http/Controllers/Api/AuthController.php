@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -87,6 +88,7 @@ class AuthController extends Controller
             $message->to($user->email)
                 ->subject('Password Information');
         });
+
         return response()->json([
             'status' => true,
             'message' => 'Signup successful',
@@ -103,10 +105,12 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
+        $platform = $request->header('platform', 'web');
+
         $user = User::where('email', $request->login)
             ->orWhere('phone', $request->login)
             ->orWhere('employeeId', $request->login)
-            ->with(['role', 'company', 'nationality'])
+            ->with(['role.permissions', 'company', 'nationality'])
             ->first();
 
         if (! $user) {
@@ -114,6 +118,25 @@ class AuthController extends Controller
                 'status' => false,
                 'message' => 'User not found',
             ], 404);
+        }
+
+        // Platform Based Restriction
+        if ($platform === 'mobile' && $user->is_company_owner == 1) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Company owner cannot login in mobile application',
+            ], 403);
+        }
+
+        if (
+            $platform === 'web' &&
+            $user->is_company_owner == 0 &&
+            $user->is_super_admin == 0
+        ) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Employees cannot login in website',
+            ], 403);
         }
 
         if (! Hash::check($request->password, $user->password)) {
@@ -138,25 +161,55 @@ class AuthController extends Controller
 
         $token = JWTAuth::fromUser($user);
 
+        // Common Fields
+        $responseUser = [
+            'id' => $user->id,
+            'employeeId' => $user->employeeId,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'login_count' => $user->login_count,
+            'last_login_ip' => $user->last_login_ip,
+            'company' => $user->company?->name,
+            'company_latitude' => $user->company?->latitude,
+            'company_longitude' => $user->company?->longitude,
+            'company_radius' => $user->company?->radius,
+            'nationality' => $user->nationality?->name,
+            'signature_image_url' => $user->signature_image_url,
+            'p_image_url' => $user->p_image_url,
+        ];
+        //  Super Admin Login (Web Only)
+        if ($user->is_super_admin == 1 && $platform === 'web') {
+
+            if ($platform !== 'web') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Super admin can login only in website',
+                ], 403);
+            }
+
+            $token = JWTAuth::fromUser($user);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Super Admin login successful',
+                'token' => $token,
+                'platform' => $platform,
+                'user' => $user,
+            ]);
+        }
+        // Web Login (Company Owner) → Role + Permissions
+        if ($platform === 'web' && $user->is_company_owner == 1) {
+            $responseUser['role'] = $user->role?->name;
+            $responseUser['permissions'] = $user->role?->permissions;
+        }
         return response()->json([
             'status' => true,
             'message' => 'Login successful',
             'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'employeeId' => $user->employeeId,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'login_count' => $user->login_count,
-                'last_login_ip' => $user->last_login_ip,
-                'role' => $user->role?->name,
-                'company' => $user->company?->name,
-                'nationality' => $user->nationality?->name,
-                'signature_image_url' => $user->signature_image_url,
-                'p_image_url' => $user->p_image_url,
-            ],
+            'platform' => $platform,
+            'user' => $responseUser,
         ]);
     }
 
@@ -170,7 +223,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => true,
-            'user' => auth('api')->user(),
+            'user' => Auth::user(),
         ]);
     }
 

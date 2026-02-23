@@ -50,6 +50,8 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at',
         'login_count',
         'last_login_ip',
+        'is_company_owner',
+        'is_super_admin',
     ];
 
     /* =========================
@@ -166,4 +168,24 @@ class User extends Authenticatable implements JWTSubject
         return $array;
     }
 
+    public function hasPermission($permissionSlug, $action)
+    {
+        if (! $this->role) {
+            return false;
+        }
+
+        if ($this->role->slug === 'company') {
+            return true;
+        }
+
+        $permission = $this->role->permissions()
+            ->where('slug', $permissionSlug)
+            ->first();
+
+        if (! $permission) {
+            return false;
+        }
+
+        return $permission->pivot->$action ?? false;
+    }
 }

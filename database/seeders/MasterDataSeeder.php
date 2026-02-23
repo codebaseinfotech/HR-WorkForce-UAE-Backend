@@ -12,26 +12,26 @@ public function run(): void
         /* =====================
          | ROLES
          ===================== */
-        DB::table('roles')->insert([
-            [
-                'name' => 'Manager',
-                'status' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Employee',
-                'status' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'HR',
-                'status' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // DB::table('roles')->insert([
+        //     [
+        //         'name' => 'Manager',
+        //         'status' => 1,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ],
+        //     [
+        //         'name' => 'Employee',
+        //         'status' => 1,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ],
+        //     [
+        //         'name' => 'HR',
+        //         'status' => 1,
+        //         'created_at' => now(),
+        //         'updated_at' => now(),
+        //     ],
+        // ]);
 
         /* =====================
          | COMPANIES
