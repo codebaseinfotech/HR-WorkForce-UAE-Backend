@@ -6,5 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserBlock extends Model
 {
-    //
+    protected $table = "blocks";
+    protected $fillable = [
+        'blocker_id',
+        'blocked_id',
+    ];
 }

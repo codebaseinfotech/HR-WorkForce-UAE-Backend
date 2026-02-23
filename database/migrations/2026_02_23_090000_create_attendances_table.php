@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
-            $table->foreignId('overtimes_user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('overtimes_user_id')->nullable();
+            // $table->foreignId('overtimes_user_id')->constrained('overtime_users')->cascadeOnDelete();
             $table->date('date');
             $table->time('check_in')->nullable();
             $table->time('check_out')->nullable();
