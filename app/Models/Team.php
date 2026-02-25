@@ -4,16 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserBlock extends Model
+class Team extends Model
 {
-    protected $table = 'blocks';
-
     protected $fillable = [
-        'blocker_id',
-        'blocked_id',
+        'company_id',
+        'name',
+        'description',
     ];
 
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'team_user');
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function toArray()
     {

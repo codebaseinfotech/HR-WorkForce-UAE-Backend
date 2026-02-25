@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserBlock extends Model
+class Holiday extends Model
 {
-    protected $table = 'blocks';
-
     protected $fillable = [
-        'blocker_id',
-        'blocked_id',
+        'holiday_calendar_id', 'date', 'title', 'type', 'is_optional',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'is_optional' => 'boolean',
     ];
 
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];

@@ -4,13 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserBlock extends Model
+class LeavePolicyItem extends Model
 {
-    protected $table = 'blocks';
-
     protected $fillable = [
-        'blocker_id',
-        'blocked_id',
+        'leave_policy_id', 'leave_type_id', 'annual_quota',
+        'carry_forward', 'max_carry_forward', 'encashment', 'max_encashment',
+    ];
+
+    protected $casts = [
+        'carry_forward' => 'boolean',
+        'encashment' => 'boolean',
     ];
 
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];

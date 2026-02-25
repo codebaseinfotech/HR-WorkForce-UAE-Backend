@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\AttendanceReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Company;
+use App\Models\HolidayCalendar;
+use App\Models\LeaveRequest;
+use App\Models\WorkSchedule;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceController extends Controller
 {
@@ -394,5 +401,302 @@ class AttendanceController extends Controller
     public function listUsers()
     {
         return \App\Models\User::all();
+    }
+
+    public function report(Request $request)
+    {
+        $user = Auth::user();
+        $companyId = $user->company_id;
+        $tz = 'Asia/Kolkata';
+
+        $data = $request->validate([
+            'range' => 'nullable|in:today,week,month,year,last_7_days,last_30_days,last_3_months',
+            'from' => 'nullable|date_format:Y-m-d',
+            'to' => 'nullable|date_format:Y-m-d|after_or_equal:from',
+        ]);
+
+        // Range resolve
+        [$from, $to] = $this->resolveRange($data, $tz);
+
+        // Work schedule (role wise)
+        $schedule = WorkSchedule::where('company_id', $companyId)
+            ->where('role_id', $user->role_id)
+            ->first();
+
+        if (! $schedule) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Work schedule not set for your role',
+            ], 422);
+        }
+
+        //  Holidays map for involved years
+        $holidayMap = $this->getHolidayMap($companyId, (int) $from->year, (int) $to->year);
+
+        //  Attendance rows in range
+        $attRows = Attendance::where('company_id', $companyId)
+            ->where('user_id', $user->id)
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->get()
+            ->keyBy(fn ($a) => Carbon::parse($a->date)->toDateString());
+
+        //  Approved leaves in range
+        $leaveRows = LeaveRequest::where('company_id', $companyId)
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->whereDate('to_date', '>=', $from->toDateString())
+            ->whereDate('from_date', '<=', $to->toDateString())
+            ->get();
+
+        $leaveDates = $this->buildLeaveDatesSet($leaveRows, $from, $to);
+
+        //  Per-day breakdown + totals
+        $period = CarbonPeriod::create($from->toDateString(), $to->toDateString());
+
+        $totalDays = 0;
+        $weeklyOffDays = 0;
+        $holidayDays = 0;
+        $workingDays = 0;
+
+        $presentDays = 0;
+        $leaveDays = 0;
+        $absentDays = 0;
+
+        $totalWorkMinutes = 0;
+        $totalOvertimeMinutes = 0;
+
+        $days = [];
+
+        foreach ($period as $d) {
+            $totalDays++;
+            $ds = $d->toDateString();
+
+            $isHoliday = isset($holidayMap[$ds]);
+            $isWeekOff = $this->isWeekOff($d, $schedule->weekly_rules, $schedule->monthly_rules ?? null);
+
+            if ($isHoliday) {
+                $holidayDays++;
+            }
+            if ($isWeekOff) {
+                $weeklyOffDays++;
+            }
+
+            $isWorkingDay = (! $isHoliday && ! $isWeekOff);
+            if ($isWorkingDay) {
+                $workingDays++;
+            }
+
+            // attendance present?
+            $att = $attRows->get($ds);
+
+            $present = false;
+            $workMinutes = 0;
+            $overtime = 0;
+
+            if ($att) {
+                // if you already store total_minutes/overtime_minutes use it
+                $workMinutes = (int) ($att->total_minutes ?? 0);
+                $overtime = (int) ($att->overtime_minutes ?? 0);
+
+                // fallback if total_minutes not stored
+                if ($workMinutes === 0 && $att->check_in && $att->check_out) {
+                    $workMinutes = $this->calcWorkMinutes($att->check_in, $att->check_out, $att->break_in, $att->break_out);
+                }
+
+                $present = ($att->check_in != null); // or require check_out as well
+            }
+
+            $onLeave = isset($leaveDates[$ds]);
+
+            // classification only on working days
+            $dayStatus = 'N/A';
+            if ($isHoliday) {
+                $dayStatus = 'holiday';
+            } elseif ($isWeekOff) {
+                $dayStatus = 'weekly_off';
+            } else {
+                if ($onLeave) {
+                    $dayStatus = 'leave';
+                    $leaveDays++;
+                } elseif ($present) {
+                    $dayStatus = 'present';
+                    $presentDays++;
+                    $totalWorkMinutes += $workMinutes;
+                    $totalOvertimeMinutes += $overtime;
+                } else {
+                    $dayStatus = 'absent';
+                    $absentDays++;
+                }
+            }
+
+            $days[] = [
+                'date' => $ds,
+                'day' => $d->format('D'),
+                'status' => $dayStatus,
+
+                'holiday_title' => $isHoliday ? ($holidayMap[$ds]['title'] ?? null) : null,
+
+                'attendance' => $att ? [
+                    'check_in' => $att->check_in,
+                    'check_out' => $att->check_out,
+                    'break_in' => $att->break_in,
+                    'break_out' => $att->break_out,
+                    'total_minutes' => (int) ($workMinutes),
+                    'overtime_minutes' => (int) ($overtime),
+                ] : null,
+            ];
+        }
+
+        return response()->json([
+            'status' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                'company_id' => $companyId,
+            ],
+            'range' => [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+                'timezone' => $tz,
+            ],
+            'summary' => [
+                'total_days' => $totalDays,
+                'working_days' => $workingDays,
+                'holiday_days' => $holidayDays,
+                'weekly_off_days' => $weeklyOffDays,
+
+                'present_days' => $presentDays,
+                'leave_days' => $leaveDays,
+                'absent_days' => $absentDays,
+
+                'total_worked' => $this->fmtDuration($totalWorkMinutes),
+                'total_overtime' => $this->fmtDuration($totalOvertimeMinutes),
+            ],
+            'days' => $days, // full calendar list
+        ]);
+    }
+
+    private function resolveRange(array $data, string $tz): array
+    {
+        $now = now()->setTimezone($tz);
+
+        if (! empty($data['from']) && ! empty($data['to'])) {
+            return [Carbon::parse($data['from'], $tz)->startOfDay(), Carbon::parse($data['to'], $tz)->startOfDay()];
+        }
+
+        $range = $data['range'] ?? 'today';
+
+        return match ($range) {
+            'today' => [$now->copy()->startOfDay(), $now->copy()->startOfDay()],
+            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()->startOfDay()],
+            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()->startOfDay()],
+            'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear()->startOfDay()],
+            'last_7_days' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->startOfDay()],
+            'last_30_days' => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->startOfDay()],
+            'last_3_months' => [$now->copy()->subMonthsNoOverflow(3)->startOfDay(), $now->copy()->startOfDay()],
+            default => [$now->copy()->startOfDay(), $now->copy()->startOfDay()],
+        };
+    }
+
+    private function getHolidayMap(int $companyId, int $yearFrom, int $yearTo): array
+    {
+        $map = [];
+
+        for ($y = $yearFrom; $y <= $yearTo; $y++) {
+            $cal = HolidayCalendar::with('holidays')
+                ->where('company_id', $companyId)
+                ->where('year', $y)
+                ->first();
+
+            if ($cal) {
+                foreach ($cal->holidays as $h) {
+                    $ds = $h->date->toDateString();
+                    $map[$ds] = [
+                        'title' => $h->title,
+                        'type' => $h->type,
+                        'is_optional' => (bool) $h->is_optional,
+                    ];
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    private function buildLeaveDatesSet($leaveRows, Carbon $from, Carbon $to): array
+    {
+        $set = [];
+
+        foreach ($leaveRows as $lr) {
+            $start = $lr->from_date->greaterThan($from) ? $lr->from_date : $from;
+            $end = $lr->to_date->lessThan($to) ? $lr->to_date : $to;
+
+            $p = CarbonPeriod::create($start->toDateString(), $end->toDateString());
+            foreach ($p as $d) {
+                $set[$d->toDateString()] = true;
+            }
+        }
+
+        return $set;
+    }
+
+    private function isWeekOff(Carbon $date, array $weeklyRules, ?array $monthlyRules): bool
+    {
+        // keys: mon,tue,wed,thu,fri,sat,sun
+        $key = strtolower($date->format('D'));
+        $value = $weeklyRules[$key] ?? 'on';
+
+        if ($value === 'off') {
+            return true;
+        }
+
+        if ($value === 'alternate' && $key === 'sat') {
+            $weekOfMonth = (int) ceil($date->day / 7);
+            $offWeeks = $monthlyRules['sat_off_weeks'] ?? [];
+
+            return in_array($weekOfMonth, $offWeeks);
+        }
+
+        return false;
+    }
+
+    private function calcWorkMinutes($checkIn, $checkOut, $breakIn = null, $breakOut = null): int
+    {
+        $in = strtotime($checkIn);
+        $out = strtotime($checkOut);
+        $total = max((int) (($out - $in) / 60), 0);
+
+        $break = 0;
+        if ($breakIn && $breakOut) {
+            $bIn = strtotime($breakIn);
+            $bOut = strtotime($breakOut);
+            $break = max((int) (($bOut - $bIn) / 60), 0);
+        }
+
+        return max($total - $break, 0);
+    }
+
+    private function fmtDuration(int $minutes): string
+    {
+        $minutes = max($minutes, 0);
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+
+        return sprintf('%02d Hrs %02d Min', $h, $m);
+    }
+
+    public function export(Request $request)
+    {
+        $data = $request->validate([
+            'range' => 'nullable|in:today,week,month,year,last_7_days,last_30_days,last_3_months',
+            'from'  => 'nullable|date_format:Y-m-d',
+            'to'    => 'nullable|date_format:Y-m-d|after_or_equal:from',
+        ]);
+
+        $user = Auth::user();
+
+        $filename = 'attendance_report_'.$user->id.'_'.now()->format('Ymd_His').'.xlsx';
+
+        return Excel::download(new AttendanceReportExport($user, $data), $filename);
     }
 }

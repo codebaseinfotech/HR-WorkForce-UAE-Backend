@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -18,9 +20,14 @@ class AuthController extends Controller
     public function signup(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'id' => 'nullable|exists:users,id',
             'first_name' => 'required|string',
             'last_name' => 'required|string',
-            'email' => 'required|email|unique:users,email',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($request->id),
+            ],
             'phone' => 'nullable',
             'company_id' => 'nullable|exists:companies,id',
             'role_id' => 'nullable|exists:roles,id',
@@ -40,7 +47,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $autoPassword = Str::random(8); // example: A8f#kP2Q
+        $autoPassword = '123456' ?? Str::random(8); // example: A8f#kP2Q
 
         $profileImagePath = null;
         if ($request->hasFile('p_image')) {
@@ -52,7 +59,7 @@ class AuthController extends Controller
             $signatureImagePath = $request->file('signature_image')->store('users/signature', 'public');
         }
 
-        $user = User::create([
+        $data = [
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
             'phone' => $request->phone,
@@ -65,10 +72,19 @@ class AuthController extends Controller
             'agree' => $request->agree ? 1 : 0,
             'p_image' => $profileImagePath,
             'signature_image' => $signatureImagePath,
-            'password' => Hash::make($autoPassword),
-            'passd' => $autoPassword,
-            'status' => User::STATUS_ACTIVE,
-        ]);
+        ];
+
+        // If creating new user → add password + created_by_user
+        if (! $request->id) {
+            $data['password'] = Hash::make($autoPassword);
+            $data['passd'] = $autoPassword;
+            $data['created_by_user'] = $request->created_by_user ?? Auth::id();
+            $data['status'] = User::STATUS_ACTIVE;
+        }
+        $user = User::updateOrCreate(
+            ['id' => $request->id], // if id exists → update
+            $data
+        );
 
         $roleName = 'HR';
         if ($user->role_id) {
@@ -77,13 +93,23 @@ class AuthController extends Controller
                 $roleName = $role->name;
             }
         }
-        $user->employeeId = generateEmployeeId($user->id, $roleName);
-        $user->save();
+
+        if (! $request->id) {
+            $roleName = strtolower(trim($user->role?->name ?? ''));
+
+            if ($roleName !== 'manager') {
+                $user->employeeId = generateEmployeeId($user->id, $roleName);
+            } else {
+                $user->employeeId = null;
+            }
+
+            $user->save();
+        }
 
         $user->p_image = $user->p_image ? asset('storage/'.$user->p_image) : null;
         $user->signature_image = $user->signature_image ? asset('storage/'.$user->signature_image) : null;
 
-        $token = JWTAuth::fromUser($user);
+        // $token = JWTAuth::fromUser($user);
         Mail::raw("Your temporary password is: $user->passd", function ($message) use ($user) {
             $message->to($user->email)
                 ->subject('Password Information');
@@ -92,7 +118,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Signup successful',
-            'token' => $token,
+            // 'token' => $token,
             'password' => $autoPassword,
             'user' => $user,
         ]);
@@ -171,6 +197,7 @@ class AuthController extends Controller
             'phone' => $user->phone,
             'login_count' => $user->login_count,
             'last_login_ip' => $user->last_login_ip,
+            'company_id' => $user->company?->id,
             'company' => $user->company?->name,
             'company_latitude' => $user->company?->latitude,
             'company_longitude' => $user->company?->longitude,
@@ -181,7 +208,6 @@ class AuthController extends Controller
         ];
         //  Super Admin Login (Web Only)
         if ($user->is_super_admin == 1 && $platform === 'web') {
-
             if ($platform !== 'web') {
                 return response()->json([
                     'status' => false,
@@ -202,8 +228,10 @@ class AuthController extends Controller
         // Web Login (Company Owner) → Role + Permissions
         if ($platform === 'web' && $user->is_company_owner == 1) {
             $responseUser['role'] = $user->role?->name;
+            $responseUser['role_id'] = $user->role?->id;
             $responseUser['permissions'] = $user->role?->permissions;
         }
+
         return response()->json([
             'status' => true,
             'message' => 'Login successful',
@@ -326,6 +354,199 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Password reset successfully',
+        ]);
+    }
+
+    public function userFetch(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'role' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $query = User::with('role')
+            ->where('company_id', $request->company_id)->where('is_super_admin', 0)->whereNot('is_super_admin', 1);
+
+        // Role filter (optional)
+        if ($request->filled('role')) {
+            $query->whereHas('role', function ($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+
+        $users = $query->get();
+
+        return response()->json([
+            'status' => true,
+            'users' => $users,
+            'message' => 'Users fetched successfully',
+        ]);
+    }
+
+    public function myCreatedUsers(Request $request, $company_id)
+    {
+        $validator = Validator::make(
+            array_merge($request->all(), ['company_id' => $company_id]),
+            [
+                'company_id' => 'required|exists:companies,id',
+                'created_by_user' => 'required|exists:users,id',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $creatorId = $request->created_by_user;
+
+        $users = User::where('company_id', $company_id)
+            ->where('created_by_user', $creatorId)
+            ->select('id', 'employeeId', 'first_name', 'last_name', 'email', 'phone', 'company_id', 'created_by_user', 'status')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Users fetched successfully',
+            'users' => $users,
+        ]);
+    }
+
+    public function updateCreatedBy(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'created_by_user' => 'required|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation Error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $user = User::find($request->user_id);
+
+        $user->created_by_user = $request->created_by_user;
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'created_by_user updated successfully',
+            'user' => $user,
+        ]);
+    }
+
+    public function summary(Request $request)
+    {
+        $user = auth()->user();
+
+        $userCompanyId = $user->company_id; // may be null for super admin
+        $isSuperAdmin = (int) ($user->is_super_admin ?? 0) === 1;
+
+        // optional filter only for super admin
+        $filterCompanyId = $isSuperAdmin ? $request->input('company_id') : null;
+
+        // base global: super admin + no company_id
+        $isGlobal = $isSuperAdmin && empty($userCompanyId);
+
+        // effective scope:
+        // - super admin + no filter => all companies
+        // - super admin + filter => single company (filtered)
+        // - non super admin => user's company only
+        $isAllCompanies = $isGlobal && empty($filterCompanyId);
+
+        $effectiveCompanyId = null;
+        if (! $isAllCompanies) {
+            $effectiveCompanyId = $isSuperAdmin && ! empty($filterCompanyId)
+                ? (int) $filterCompanyId
+                : (int) $userCompanyId;
+        }
+
+        // Validate company_id if provided
+        if ($isSuperAdmin && ! empty($filterCompanyId)) {
+            $exists = \App\Models\Company::where('id', $effectiveCompanyId)->exists();
+            if (! $exists) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid company_id',
+                ], 422);
+            }
+        }
+
+        // Companies count
+        $companiesCount = $isAllCompanies
+            ? \App\Models\Company::count()
+            : \App\Models\Company::where('id', $effectiveCompanyId)->count();
+
+        // Users query
+        $usersQuery = \App\Models\User::query()
+            ->when(! $isAllCompanies, fn ($q) => $q->where('company_id', $effectiveCompanyId));
+
+        $usersTotal = (clone $usersQuery)->count();
+
+        $roleCounts = (clone $usersQuery)
+            ->selectRaw('role_id, COUNT(*) as total')
+            ->groupBy('role_id')
+            ->pluck('total', 'role_id');
+
+        $roleMap = \App\Models\Role::pluck('name', 'id');
+
+        $roleWise = [];
+        foreach ($roleCounts as $roleId => $cnt) {
+            $roleWise[] = [
+                'role_id' => (int) $roleId,
+                'role_name' => $roleMap[$roleId] ?? 'Unknown',
+                'count' => (int) $cnt,
+            ];
+        }
+
+        // Tasks query
+        $tasksQuery = \App\Models\Task::query()
+            ->when(! $isAllCompanies, fn ($q) => $q->where('company_id', $effectiveCompanyId));
+
+        $tasksTotal = (clone $tasksQuery)->count();
+
+        $tasksByStatus = (clone $tasksQuery)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $assignedTasksCount = (clone $tasksQuery)
+            ->whereHas('assignments')
+            ->count();
+
+        return response()->json([
+            'status' => true,
+            'scope' => $isAllCompanies ? 'global_all_companies' : 'single_company',
+            'filters' => [
+                'company_id' => $effectiveCompanyId, // null when global
+            ],
+            'data' => [
+                'companies_count' => (int) $companiesCount,
+                'users' => [
+                    'total' => (int) $usersTotal,
+                    'role_wise' => $roleWise,
+                ],
+                'tasks' => [
+                    'total' => (int) $tasksTotal,
+                    'assigned' => (int) $assignedTasksCount,
+                    'by_status' => $tasksByStatus,
+                ],
+            ],
         ]);
     }
 }

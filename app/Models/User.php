@@ -25,6 +25,14 @@ class User extends Authenticatable implements JWTSubject
 
     const STATUS_UNBLOCKED = 4;
 
+    public static $statusLabels = [
+        0 => 'pending',
+        1 => 'active',
+        2 => 'inactive',
+        3 => 'blocked',
+        4 => 'unblocked',
+    ];
+
     /* =========================
      |  MASS ASSIGNABLE FIELDS
      ========================= */
@@ -52,6 +60,7 @@ class User extends Authenticatable implements JWTSubject
         'last_login_ip',
         'is_company_owner',
         'is_super_admin',
+        'created_by_user',
     ];
 
     /* =========================
@@ -68,7 +77,7 @@ class User extends Authenticatable implements JWTSubject
         'signature_image',
     ];
 
-    protected $appends = ['p_image_url', 'signature_image_url'];
+    protected $appends = ['p_image_url', 'signature_image_url','status_name'];
 
     protected $casts = [
         'agree' => 'boolean',
@@ -187,5 +196,25 @@ class User extends Authenticatable implements JWTSubject
         }
 
         return $permission->pivot->$action ?? false;
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by_user');
+    }
+
+    public function createdUsers()
+    {
+        return $this->hasMany(User::class, 'created_by_user');
+    }
+
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class, 'team_user');
+    }
+
+    public function getStatusNameAttribute()
+    {
+        return self::$statusLabels[$this->status] ?? 'unknown';
     }
 }

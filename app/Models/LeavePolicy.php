@@ -4,14 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserBlock extends Model
+class LeavePolicy extends Model
 {
-    protected $table = 'blocks';
-
-    protected $fillable = [
-        'blocker_id',
-        'blocked_id',
-    ];
+    protected $fillable = ['company_id', 'role_id', 'year', 'name'];
 
     protected $hidden = ['created_at', 'updated_at', 'deleted_at'];
 
@@ -26,5 +21,10 @@ class UserBlock extends Model
         }
 
         return $array;
+    }
+
+    public function items()
+    {
+        return $this->hasMany(LeavePolicyItem::class);
     }
 }

@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
     public function index($id = null)
     {
-        $query = Role::companyWise()->with('permissions');
+        $query = Role::companyWise()
+            ->with('permissions')
+            ->whereNotIn('name', ['Super Admin', 'Company']); //  hide these 2 roles
 
         // If ID provided → return single role
         if ($id) {
@@ -34,7 +37,7 @@ class RoleController extends Controller
         $role = Role::create([
             'name' => $request->name,
             'slug' => $request->slug,
-            'company_id' => auth()->user()->company_id,
+            'company_id' => Auth::user()->company_id,
         ]);
 
         return response()->json($role);
