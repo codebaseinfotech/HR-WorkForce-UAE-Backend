@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\EmployeeSalary;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -547,6 +548,32 @@ class AuthController extends Controller
                     'by_status' => $tasksByStatus,
                 ],
             ],
+        ]);
+    }
+
+    public function employee_salary(Request $request)
+    {
+        $data = $request->validate([
+            'company_id' => 'required|exists:companies,id',
+            'user_id' => 'required|exists:users,id',
+
+            'salary_type' => 'required|in:monthly,daily,hourly',
+
+            'monthly_salary' => 'nullable|numeric',
+            'daily_salary' => 'nullable|numeric',
+            'hourly_salary' => 'nullable|numeric',
+
+            'overtime_rate_per_hour' => 'nullable|numeric',
+
+            'effective_from' => 'required|date',
+            'effective_to' => 'nullable|date|after_or_equal:effective_from',
+        ]);
+
+        $salary = EmployeeSalary::create($data);
+
+        return response()->json([
+            'success' => true,
+            'data' => $salary,
         ]);
     }
 }

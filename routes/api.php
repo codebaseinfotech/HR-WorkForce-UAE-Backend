@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AttendanceController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlockController;
 use App\Http\Controllers\Api\CompanyController;
+use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\HolidayCalendarController;
 use App\Http\Controllers\Api\LeaveAdminController;
 use App\Http\Controllers\Api\LeaveController;
@@ -91,7 +92,7 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get('company/list/{id?}', [CompanyController::class, 'index']);
     Route::delete('company/delete/{id}', [CompanyController::class, 'delete']);
 
-    Route::prefix('attendances')->group(function () {
+    Route::prefix(' ')->group(function () {
         Route::get('/all', [AttendanceController::class, 'index']); // List all attendances
         Route::post('/mark', [AttendanceController::class, 'mark']); // Mark attendance
         Route::get('/report', [AttendanceController::class, 'report']);
@@ -181,4 +182,26 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
 
     // Admin approvals (optional but needed for cut)
     Route::post('/leave-requests/{leaveRequest}/action', [LeaveAdminController::class, 'action']);
+    Route::prefix('live')->group(function () {
+        Route::post('/location/ping', [\App\Http\Controllers\Api\LiveLocationController::class, 'ping']);
+        Route::get('/location/me', [\App\Http\Controllers\Api\LiveLocationController::class, 'me']);
+        Route::get('/location/company', [\App\Http\Controllers\Api\LiveLocationController::class, 'company']);
+        Route::get('/location/user/{userId}', [\App\Http\Controllers\Api\LiveLocationController::class, 'user']);
+    });
+
+    Route::get('/employee-salaries', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'index']);          // list
+    Route::get('/employee-salaries/{id}', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'show']);      // single
+    Route::post('/employee-salaries/add-update', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'addUpdate']); // create-update
+    Route::delete('/employee-salaries/{id}', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'destroy']); // delete
+    Route::get('/salary-slip/pdf', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'downloadPdf']);
+    Route::get('/salary-slip/pdf-range', [\App\Http\Controllers\Api\EmployeeSalaryController::class, 'downloadPdfRange']);
+    // APP (accordion)
+    Route::get('/faqs', [FaqController::class, 'index']);
+
+    // ADMIN
+    Route::get('/faqs', [FaqController::class, 'adminIndex']);
+    Route::post('/faqs/add-update', [FaqController::class, 'store']);
+    Route::get('/faqs/{id}', [FaqController::class, 'show']);
+    Route::delete('/faqs/{id}', [FaqController::class, 'destroy']);
+    Route::post('/faqs/{id}/toggle', [FaqController::class, 'toggle']);
 });

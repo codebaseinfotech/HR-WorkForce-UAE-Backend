@@ -19,6 +19,8 @@ class Attendance extends Model
         'break_out',
         'total_minutes',
         'overtime_minutes',
+        'overtime_out',
+        'overtime_in',
         'overtimes_user_id', // optional if you use it
     ];
 

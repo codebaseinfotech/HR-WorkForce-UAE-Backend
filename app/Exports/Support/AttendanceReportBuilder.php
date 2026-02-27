@@ -23,24 +23,30 @@ class AttendanceReportBuilder
             ->first();
 
         if (! $schedule) {
-            // export ma exception avoid - return minimal
             return [
-                'user' => ['id' => $user->id, 'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')), 'company_id' => $companyId],
-                'summary' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
+                'user' => [
+                    'id' => $user->id,
+                    'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                    'company_id' => $companyId,
+                ],
+                'summary' => [
+                    'from' => $from->toDateString(),
+                    'to' => $to->toDateString(),
+                ],
                 'days' => [],
                 'leaves' => [],
                 'holidays' => [],
-                'error' => 'Work schedule not set for your role'
+                'error' => 'Work schedule not set for your role',
             ];
         }
 
-        $holidayMap = $this->getHolidayMap($companyId, (int)$from->year, (int)$to->year);
+        $holidayMap = $this->getHolidayMap($companyId, (int) $from->year, (int) $to->year);
 
         $attRows = Attendance::where('company_id', $companyId)
             ->where('user_id', $user->id)
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->get()
-            ->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
+            ->keyBy(fn ($a) => Carbon::parse($a->date)->toDateString());
 
         $leaveRows = LeaveRequest::where('company_id', $companyId)
             ->where('user_id', $user->id)
@@ -66,7 +72,10 @@ class AttendanceReportBuilder
             'leave_days' => 0,
             'absent_days' => 0,
 
+            // ✅ total_work_minutes now means FINAL TOTAL minutes (work + overtime)
             'total_work_minutes' => 0,
+
+            // ✅ total overtime (shift overtime + session overtime)
             'total_overtime_minutes' => 0,
         ];
 
@@ -78,34 +87,71 @@ class AttendanceReportBuilder
 
             $isHoliday = isset($holidayMap[$ds]);
             $isWeekOff = $this->isWeekOff($d, $schedule->weekly_rules, $schedule->monthly_rules ?? null);
-            $isWorkingDay = (!$isHoliday && !$isWeekOff);
+            $isWorkingDay = (! $isHoliday && ! $isWeekOff);
 
-            if ($isHoliday) $summary['holiday_days']++;
-            if ($isWeekOff) $summary['weekly_off_days']++;
-            if ($isWorkingDay) $summary['working_days']++;
+            if ($isHoliday) {
+                $summary['holiday_days']++;
+            }
+            if ($isWeekOff) {
+                $summary['weekly_off_days']++;
+            }
+            if ($isWorkingDay) {
+                $summary['working_days']++;
+            }
 
             $att = $attRows->get($ds);
+
             $present = ($att && $att->check_in);
 
-            $workMinutes = (int)($att->total_minutes ?? 0);
-            $overtime = (int)($att->overtime_minutes ?? 0);
+            $workMinutes = 0;
+            $shiftOvertime = 0;
+            $sessionOvertime = 0;
+            $finalTotal = 0;
 
-            if ($workMinutes === 0 && $att && $att->check_in && $att->check_out) {
-                $workMinutes = $this->calcWorkMinutes($att->check_in, $att->check_out, $att->break_in, $att->break_out);
+            if ($att) {
+                $workMinutes = (int) ($att->total_minutes ?? 0);
+                $shiftOvertime = (int) ($att->overtime_minutes ?? 0);
+
+                // fallback if total_minutes not stored
+                if ($workMinutes === 0 && $att->check_in && $att->check_out) {
+                    $workMinutes = $this->calcWorkMinutes(
+                        $att->check_in,
+                        $att->check_out,
+                        $att->break_in,
+                        $att->break_out
+                    );
+                }
+
+                // ✅ session overtime (overtime_in/out)
+                if ($att->overtime_in && $att->overtime_out) {
+                    $otIn = strtotime($att->overtime_in);
+                    $otOut = strtotime($att->overtime_out);
+                    $sessionOvertime = max((int) (($otOut - $otIn) / 60), 0);
+                }
+
+                $finalTotal = $workMinutes + $shiftOvertime + $sessionOvertime;
             }
 
             $onLeave = isset($leaveDates[$ds]);
 
             $status = 'N/A';
-            if ($isHoliday) $status = 'holiday';
-            elseif ($isWeekOff) $status = 'weekly_off';
-            else {
-                if ($onLeave) { $status = 'leave'; $summary['leave_days']++; }
-                elseif ($present) {
+            if ($isHoliday) {
+                $status = 'holiday';
+            } elseif ($isWeekOff) {
+                $status = 'weekly_off';
+            } else {
+                if ($onLeave) {
+                    $status = 'leave';
+                    $summary['leave_days']++;
+                } elseif ($present) {
                     $status = 'present';
                     $summary['present_days']++;
-                    $summary['total_work_minutes'] += $workMinutes;
-                    $summary['total_overtime_minutes'] += $overtime;
+
+                    // ✅ Add FINAL TOTAL in worked minutes
+                    $summary['total_work_minutes'] += $finalTotal;
+
+                    // ✅ Add TOTAL overtime (shift + session)
+                    $summary['total_overtime_minutes'] += ($shiftOvertime + $sessionOvertime);
                 } else {
                     $status = 'absent';
                     $summary['absent_days']++;
@@ -123,8 +169,15 @@ class AttendanceReportBuilder
                 'break_out' => $att->break_out ?? '',
                 'check_out' => $att->check_out ?? '',
 
-                'work_minutes' => $workMinutes,
-                'overtime_minutes' => $overtime,
+                // ✅ overtime session times
+                'overtime_in' => $att->overtime_in ?? '',
+                'overtime_out' => $att->overtime_out ?? '',
+
+                // ✅ minutes
+                'work_minutes' => (int) $workMinutes,
+                'shift_overtime_minutes' => (int) $shiftOvertime,
+                'session_overtime_minutes' => (int) $sessionOvertime,
+                'final_total_minutes' => (int) $finalTotal,
             ];
         }
 
@@ -132,7 +185,7 @@ class AttendanceReportBuilder
             return [
                 'from_date' => $l->from_date->toDateString(),
                 'to_date' => $l->to_date->toDateString(),
-                'days' => (float)$l->days,
+                'days' => (float) $l->days,
                 'status' => $l->status,
                 'reason' => $l->reason,
             ];
@@ -147,7 +200,7 @@ class AttendanceReportBuilder
             'summary' => $summary,
             'days' => $days,
             'leaves' => $leaves,
-            'holidays' => $holidayMap, // map keyed by date
+            'holidays' => $holidayMap,
         ];
     }
 
@@ -155,8 +208,11 @@ class AttendanceReportBuilder
     {
         $now = now()->setTimezone($tz);
 
-        if (!empty($data['from']) && !empty($data['to'])) {
-            return [Carbon::parse($data['from'], $tz)->startOfDay(), Carbon::parse($data['to'], $tz)->startOfDay()];
+        if (! empty($data['from']) && ! empty($data['to'])) {
+            return [
+                Carbon::parse($data['from'], $tz)->startOfDay(),
+                Carbon::parse($data['to'], $tz)->startOfDay(),
+            ];
         }
 
         $range = $data['range'] ?? 'today';
@@ -189,7 +245,7 @@ class AttendanceReportBuilder
                         'date' => $h->date->toDateString(),
                         'title' => $h->title,
                         'type' => $h->type,
-                        'is_optional' => (bool)$h->is_optional,
+                        'is_optional' => (bool) $h->is_optional,
                     ];
                 }
             }
@@ -219,11 +275,14 @@ class AttendanceReportBuilder
         $key = strtolower($date->format('D')); // mon,tue...
         $value = $weeklyRules[$key] ?? 'on';
 
-        if ($value === 'off') return true;
+        if ($value === 'off') {
+            return true;
+        }
 
         if ($value === 'alternate' && $key === 'sat') {
             $weekOfMonth = (int) ceil($date->day / 7);
             $offWeeks = $monthlyRules['sat_off_weeks'] ?? [];
+
             return in_array($weekOfMonth, $offWeeks);
         }
 
@@ -234,13 +293,13 @@ class AttendanceReportBuilder
     {
         $in = strtotime($checkIn);
         $out = strtotime($checkOut);
-        $total = max((int)(($out - $in) / 60), 0);
+        $total = max((int) (($out - $in) / 60), 0);
 
         $break = 0;
         if ($breakIn && $breakOut) {
             $bIn = strtotime($breakIn);
             $bOut = strtotime($breakOut);
-            $break = max((int)(($bOut - $bIn) / 60), 0);
+            $break = max((int) (($bOut - $bIn) / 60), 0);
         }
 
         return max($total - $break, 0);

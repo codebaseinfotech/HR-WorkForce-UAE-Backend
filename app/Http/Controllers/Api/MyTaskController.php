@@ -122,108 +122,134 @@ class MyTaskController extends Controller
     public function action(Request $request, $taskId)
     {
         $data = $request->validate([
-            'action' => 'required|in:accept,start,progress,done,block',
+            'status' => 'required|in:To-do,In-progress,In-review,Pending,Block,Bugs,Done',
             'progress' => 'nullable|integer|min:0|max:100',
             'note' => 'nullable|string|max:1000',
         ]);
 
         $tu = $this->findTaskUser($taskId);
 
-        switch ($data['action']) {
+        $task = Task::where('id', $taskId)
+            ->where('company_id', $tu->company_id)
+            ->firstOrFail();
 
-            case 'accept':
-                if ($tu->status !== 'assigned') {
-                    return response()->json(['status' => false, 'message' => 'Invalid status for accept'], 409);
-                }
-
-                $tu->update([
-                    'status' => 'accepted',
-                    'accepted_at' => now(),
-                ]);
-
-                return response()->json(['status' => true, 'message' => 'Task accepted']);
-
-            case 'start':
-                if (! in_array($tu->status, ['assigned', 'accepted'])) {
-                    return response()->json(['status' => false, 'message' => 'Invalid status for start'], 409);
-                }
-
-                $tu->update([
-                    'status' => 'in_progress',
-                    'accepted_at' => $tu->accepted_at ?? now(),
-                    'started_at' => now(),
-                ]);
-
-                return response()->json(['status' => true, 'message' => 'Task started']);
-
-            case 'progress':
-                if (! isset($data['progress'])) {
-                    return response()->json(['status' => false, 'message' => 'progress is required for progress action'], 422);
-                }
-
-                // Blocked task ma progress allow karvu che? (Yes) — status blocked j rahe.
-                $updates = ['progress' => (int) $data['progress']];
-
-                // If assigned/accepted -> auto in_progress
-                if (in_array($tu->status, ['assigned', 'accepted'])) {
-                    $updates['status'] = 'in_progress';
-                    $updates['accepted_at'] = $tu->accepted_at ?? now();
-                    $updates['started_at'] = $tu->started_at ?? now();
-                }
-
-                // If progress=100 => done (blocked hoy to done allow nai karvu hoy to aa part remove kari dejo)
-                if ((int) $data['progress'] === 100) {
-                    if ($tu->status === 'blocked') {
-                        return response()->json(['status' => false, 'message' => 'Blocked task cannot be completed'], 409);
-                    }
-
-                    $updates['status'] = 'done';
-                    $updates['completed_at'] = now();
-                    if (! empty($data['note'])) {
-                        $updates['note'] = $data['note'];
-                    }
-                }
-
-                $tu->update($updates);
-
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Progress updated',
-                    'current_status' => $tu->fresh()->status,
-                    'progress' => (int) $tu->fresh()->progress,
-                ]);
-
-            case 'block':
-                // block only when not done
-                if ($tu->status === 'done') {
-                    return response()->json(['status' => false, 'message' => 'Done task cannot be blocked'], 409);
-                }
-
-                $tu->update([
-                    'status' => 'blocked',
-                    'note' => $data['note'] ?? $tu->note,
-                ]);
-
-                return response()->json(['status' => true, 'message' => 'Task blocked']);
-
-            case 'done':
-                if (! in_array($tu->status, ['in_progress', 'accepted', 'assigned'])) {
-                    return response()->json(['status' => false, 'message' => 'Invalid status for done'], 409);
-                }
-
-                $tu->update([
-                    'status' => 'done',
-                    'progress' => 100,
-                    'accepted_at' => $tu->accepted_at ?? now(),
-                    'started_at' => $tu->started_at ?? now(),
-                    'completed_at' => now(),
-                    'note' => $data['note'] ?? $tu->note,
-                ]);
-
-                return response()->json(['status' => true, 'message' => 'Task marked as done']);
+        // If already Done → cannot change
+        if ($task->status === 'Done' && $data['status'] !== 'Done') {
+            return response()->json([
+                'status' => false,
+                'message' => 'Done task status cannot be changed',
+            ], 409);
         }
 
-        return response()->json(['status' => false, 'message' => 'Invalid action'], 422);
+        $updates = [];
+
+        switch ($data['status']) {
+
+            case 'To-do':
+
+                $task->update(['status' => 'To-do']);
+
+                break;
+
+            case 'In-progress':
+
+                $task->update(['status' => 'In-progress']);
+
+                $updates['accepted_at'] = $tu->accepted_at ?? now();
+                $updates['started_at'] = $tu->started_at ?? now();
+                $updates['status'] = 'in_progress';
+
+                if (isset($data['progress'])) {
+                    $updates['progress'] = (int) $data['progress'];
+                }
+
+                break;
+
+            case 'In-review':
+
+                $task->update(['status' => 'In-review']);
+
+                break;
+
+            case 'Pending':
+
+                $request->validate([
+                    'note' => 'required|string|max:1000',
+                ]);
+
+                $task->update(['status' => 'Pending']);
+                $updates['note'] = $data['note'];
+
+                break;
+
+            case 'Block':
+
+                $request->validate([
+                    'note' => 'required|string|max:1000',
+                ]);
+
+                if ($tu->status === 'done') {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Done task cannot be blocked',
+                    ], 409);
+                }
+
+                $task->update(['status' => 'Block']);
+                $updates['status'] = 'blocked';
+                $updates['note'] = $data['note'];
+
+                break;
+
+            case 'Bugs':
+
+                $request->validate([
+                    'note' => 'required|string|max:1000',
+                ]);
+
+                $task->update(['status' => 'Bugs']);
+                $updates['note'] = $data['note'];
+
+                break;
+
+            case 'Done':
+
+                $request->validate([
+                    'note' => 'required|string|max:1000',
+                ]);
+
+                if ($tu->status === 'blocked') {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Blocked task cannot be completed',
+                    ], 409);
+                }
+
+                $task->update(['status' => 'Done']);
+
+                $updates['status'] = 'done';
+                $updates['progress'] = 100;
+                $updates['accepted_at'] = $tu->accepted_at ?? now();
+                $updates['started_at'] = $tu->started_at ?? now();
+                $updates['completed_at'] = now();
+                $updates['note'] = $data['note'];
+
+                break;
+        }
+
+        // Update assignment table if needed
+        if (! empty($updates)) {
+            $tu->update($updates);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Task status updated successfully',
+            'task_status' => $task->fresh()->status,
+            'assignment_status' => $tu->fresh()->status,
+            'progress' => (int) ($tu->fresh()->progress ?? 0),
+            'note' => $tu->fresh()->note,
+        ], 200);
     }
 
     public function feedback(Request $request, $taskId)
