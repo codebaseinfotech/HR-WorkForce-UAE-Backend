@@ -217,4 +217,24 @@ class User extends Authenticatable implements JWTSubject
     {
         return self::$statusLabels[$this->status] ?? 'unknown';
     }
+
+    public function threadMemberships()
+    {
+        return $this->hasMany(ThreadMember::class, 'user_id');
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function blockedUsers()
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    public function blockedByUsers()
+    {
+        return $this->hasMany(UserBlock::class, 'blocked_id');
+    }
 }

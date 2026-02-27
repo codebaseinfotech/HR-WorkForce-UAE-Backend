@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "HRMS Chat API",
+    "_postman_id": "2f22dcbf-a82f-4db4-9fd7-fec42a4411b4",
+    "description": "Chat APIs: direct/group threads, messages, reads, delete, block/unblock.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "List Threads",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads"
+      }
+    },
+    {
+      "name": "Create/Get Direct Thread",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}}\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/direct"
+      }
+    },
+    {
+      "name": "Create Group Thread",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"HR Project Group\",\n  \"member_ids\": [{{userId}}]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/group"
+      }
+    },
+    {
+      "name": "Add Members to Thread",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"member_ids\": [{{userId}}]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/members"
+      }
+    },
+    {
+      "name": "Leave Thread",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/leave"
+      }
+    },
+    {
+      "name": "List Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/messages"
+      }
+    },
+    {
+      "name": "Send Text Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"text\",\n  \"body\": \"Hello from Postman\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/messages"
+      }
+    },
+    {
+      "name": "Send Image Message (Multipart)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "type", "value": "image", "type": "text" },
+            { "key": "body", "value": "Screenshot attached", "type": "text" },
+            { "key": "attachment", "type": "file", "src": "" }
+          ]
+        },
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/messages"
+      }
+    },
+    {
+      "name": "Mark Thread Read",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/read"
+      }
+    },
+    {
+      "name": "Message Seen/Unseen",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/messages/{{messageId}}/reads"
+      }
+    },
+    {
+      "name": "Delete Message (Me)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scope\": \"me\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/messages/{{messageId}}"
+      }
+    },
+    {
+      "name": "Delete Message (All)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scope\": \"all\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/messages/{{messageId}}"
+      }
+    },
+    {
+      "name": "Block User",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}}\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/block"
+      }
+    },
+    {
+      "name": "Unblock User",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}}\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/unblock"
+      }
+    },
+    {
+      "name": "List Thread Members",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/members"
+      }
+    },
+    {
+      "name": "Promote Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}}\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/admins"
+      }
+    },
+    {
+      "name": "Demote Admin (URL Param)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/admins/{{userId}}"
+      }
+    },
+    {
+      "name": "Demote Admin (Body)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": {{userId}}\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/threads/{{threadId}}/admins"
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "2" },
+    { "key": "threadId", "value": "1" },
+    { "key": "messageId", "value": "1" }
+  ]
+}

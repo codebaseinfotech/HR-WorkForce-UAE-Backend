@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MessageDeletion extends Model
 {
@@ -10,21 +11,13 @@ class MessageDeletion extends Model
 
     protected $casts = ['deleted_at' => 'datetime'];
 
-    public function message()
+    public function message(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Message::class, 'message_id');
+        return $this->belongsTo(Message::class, 'message_id');
     }
 
-    public function toArray()
+    public function user(): BelongsTo
     {
-        $array = parent::toArray();
-
-        foreach ($array as $key => $value) {
-            if (is_null($value)) {
-                $array[$key] = '';
-            }
-        }
-
-        return $array;
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

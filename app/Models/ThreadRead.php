@@ -5,24 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ThreadMember extends Model
+class ThreadRead extends Model
 {
     protected $fillable = [
         'thread_id',
         'user_id',
-        'role',
-        'joined_at',
-        'left_at',
+        'last_read_at',
     ];
 
     protected $casts = [
-        'joined_at' => 'datetime',
-        'left_at' => 'datetime',
+        'last_read_at' => 'datetime',
     ];
 
     public function thread(): BelongsTo
     {
-        return $this->belongsTo(Thread::class);
+        return $this->belongsTo(Thread::class, 'thread_id');
     }
 
     public function user(): BelongsTo

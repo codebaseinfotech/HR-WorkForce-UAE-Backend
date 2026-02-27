@@ -2,233 +2,340 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\Chat\MessageDeleted;
+use App\Events\Chat\MessageSent;
+use App\Events\Chat\ThreadReadUpdated;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Chat\DeleteMessageRequest;
+use App\Http\Requests\Chat\SendMessageRequest;
+use App\Http\Resources\Chat\MessageResource;
 use App\Models\Message;
-use App\Models\MessageAttachment;
 use App\Models\MessageDeletion;
 use App\Models\MessageRead;
 use App\Models\Thread;
 use App\Models\ThreadMember;
-use App\Support\ChatAuth;
+use App\Models\ThreadRead;
+use App\Models\UserBlock;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
-    public function list(Request $request, Thread $thread)
+    public function list(Request $request, Thread $thread): JsonResponse
     {
-        $me = $request->user(); // ✅ best for API
-        abort_if(! $me, 401, 'Unauthenticated');
+        $me = $request->user();
+        $this->authorize('view', $thread);
 
-        abort_if($thread->company_id !== $me->company_id, 404);
-        ChatAuth::ensureMember($thread->id, $me->id);
+        $perPage = max(1, min((int) $request->integer('per_page', 30), 100));
 
-        $messages = Message::where('thread_id', $thread->id)
-            ->whereNull('deleted_at')
-            ->whereDoesntHave('deletions', function ($q) use ($me) {
+        $messages = Message::query()
+            ->where('thread_id', $thread->id)
+            ->whereDoesntHave('deletions', function (Builder $q) use ($me) {
                 $q->where('user_id', $me->id)->whereNotNull('deleted_at');
             })
-            ->with(['sender:id,first_name,avatar_path', 'attachments'])
+            ->with('sender:id,first_name,last_name,avatar_path,p_image')
             ->orderByDesc('id')
-            ->paginate(30);
+            ->paginate($perPage);
 
-        $messages->getCollection()->transform(function ($m) {
-            $m->attachments->transform(function ($a) {
-                $a->url = Storage::disk($a->disk)->url($a->path);
-                return $a;
-            });
-
-            return $m;
-        });
-
-        return response()->json($messages);
+        return response()->json([
+            'status' => true,
+            'data' => MessageResource::collection($messages->getCollection())->resolve(),
+            'meta' => [
+                'current_page' => $messages->currentPage(),
+                'last_page' => $messages->lastPage(),
+                'per_page' => $messages->perPage(),
+                'total' => $messages->total(),
+            ],
+        ]);
     }
 
-    /**
-     * POST /threads/{thread}/messages
-     * Send message (JSON for text OR multipart for files)
-     * - JSON: { body, message_type=text }
-     * - Multipart: body, message_type=file, files[]
-     */
-    public function send(Request $request, Thread $thread)
+    public function send(SendMessageRequest $request, Thread $thread): JsonResponse
     {
         $me = $request->user();
+        $this->authorize('view', $thread);
+        $this->ensureThreadNotBlocked($thread, (int) $me->id);
 
-        abort_if($thread->company_id !== $me->company_id, 404);
-        ChatAuth::ensureMember($thread->id, $me->id);
+        $type = $request->validated('type');
+        $attachment = $request->attachmentFile();
+        $message = null;
+        $payload = null;
 
-        $request->validate([
-            'body' => 'nullable|string',
-            'message_type' => 'nullable|in:text,media,file',
-            'files' => 'nullable|array',
-            'files.*' => 'file|max:20480',
-            'file' => 'nullable|file|max:20480', // single file support
-        ]);
+        DB::transaction(function () use ($request, $thread, $me, $type, $attachment, &$message, &$payload) {
+            $attachmentPath = null;
+            $attachmentMeta = null;
 
-        $messageType = $request->message_type ?? ($request->hasFile('files') ? 'file' : 'text');
-        return DB::transaction(function () use ($request, $thread, $me, $messageType) {
-            $msg = Message::create([
-                'thread_id' => $thread->id,
-                'sender_id' => $me->id,
-                'body' => $request->body,
-                'message_type' => $messageType,
-            ]);
+            if ($attachment) {
+                $attachmentPath = $attachment->store(
+                    "chat/{$thread->company_id}/{$thread->id}",
+                    'public'
+                );
 
-            if ($request->hasFile('files')) {
-                foreach ($request->file('files') as $file) {
-                    $path = $file->store("chat/threads/{$thread->id}", 'public');
-
-                    MessageAttachment::create([
-                        'message_id' => $msg->id,
-                        'disk' => 'public',
-                        'path' => $path,
-                        'original_name' => $file->getClientOriginalName(),
-                        'mime' => $file->getClientMimeType(),
-                        'size' => (int) ($file->getSize() ?? 0),
-                    ]);
-                }
-
-                // if files present and type was text, convert to file
-                if ($msg->message_type === 'text') {
-                    $msg->message_type = 'file';
-                    $msg->save();
-                }
+                $attachmentMeta = [
+                    'original_name' => $attachment->getClientOriginalName(),
+                    'mime' => $attachment->getClientMimeType(),
+                    'size' => (int) ($attachment->getSize() ?? 0),
+                ];
             }
 
-            $msg->load(['sender:id,first_name,avatar_path', 'attachments']);
-            $msg->attachments->transform(function ($a) {
-                $a->url = Storage::disk($a->disk)->url($a->path);
+            $message = Message::query()->create([
+                'thread_id' => $thread->id,
+                'company_id' => $thread->company_id,
+                'sender_id' => $me->id,
+                'type' => $type,
+                'body' => $request->validated('body'),
+                'attachment_path' => $attachmentPath,
+                'attachment_meta' => $attachmentMeta,
+            ]);
 
-                return $a;
+            $now = now();
+
+            Thread::query()
+                ->where('id', $thread->id)
+                ->update([
+                    'last_message_id' => $message->id,
+                    'last_message_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+            MessageRead::query()->upsert([
+                [
+                    'message_id' => $message->id,
+                    'thread_id' => $thread->id,
+                    'user_id' => $me->id,
+                    'seen_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ],
+            ], ['message_id', 'user_id'], ['thread_id', 'seen_at', 'updated_at']);
+
+            ThreadRead::query()->upsert([
+                [
+                    'thread_id' => $thread->id,
+                    'user_id' => $me->id,
+                    'last_read_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ],
+            ], ['thread_id', 'user_id'], ['last_read_at', 'updated_at']);
+
+            $message->load('sender:id,first_name,last_name,avatar_path,p_image');
+            $payload = (new MessageResource($message))->resolve();
+
+            DB::afterCommit(function () use ($thread, $payload) {
+                event(new MessageSent($thread->id, $payload));
+            });
+        });
+
+        return response()->json([
+            'status' => true,
+            'data' => $payload,
+        ], 201);
+    }
+
+    public function delete(DeleteMessageRequest $request, Message $message): JsonResponse
+    {
+        $me = $request->user();
+        $thread = $message->thread;
+
+        abort_if(! $thread, 404, 'Thread not found');
+        abort_if((int) $thread->company_id !== (int) $me->company_id, 404, 'Message not found');
+
+        $scope = $request->validated('scope');
+
+        if ($scope === 'me') {
+            $this->authorize('deleteForMe', $message);
+
+            $deletedAt = now();
+            MessageDeletion::query()->updateOrCreate(
+                [
+                    'message_id' => $message->id,
+                    'user_id' => $me->id,
+                ],
+                [
+                    'deleted_at' => $deletedAt,
+                ]
+            );
+
+            DB::afterCommit(function () use ($thread, $message, $me, $deletedAt) {
+                event(new MessageDeleted($thread->id, $message->id, $me->id, 'me', $deletedAt->toISOString()));
             });
 
-            return response()->json($msg, 201);
-        });
-    }
+            return response()->json([
+                'status' => true,
+                'data' => ['message' => 'Deleted for you'],
+            ]);
+        }
 
-    /**
-     * DELETE /messages/{message}
-     * Body: { "scope": "me" } or { "scope": "all" }
-     */
-    public function delete(Request $request, Message $message)
-    {
-        $me = $request->user();
-        $thread = $message->thread;
+        $this->authorize('deleteForAll', $message);
+        $deletedAt = now();
 
-        abort_if(! $thread, 404);
-        abort_if($thread->company_id !== $me->company_id, 404);
-
-        ChatAuth::ensureMember($thread->id, $me->id);
-
-        $request->validate([
-            'scope' => 'required|in:me,all',
+        $message->update([
+            'deleted_for_all_at' => $deletedAt,
         ]);
 
-        if ($request->scope === 'all') {
-            // only sender or group admin can delete-for-all
-            $isSender = $message->sender_id === $me->id;
+        DB::afterCommit(function () use ($thread, $message, $me, $deletedAt) {
+            event(new MessageDeleted($thread->id, $message->id, $me->id, 'all', $deletedAt->toISOString()));
+        });
 
-            $isAdmin = ThreadMember::where('thread_id', $thread->id)
-                ->where('user_id', $me->id)
-                ->whereNull('left_at')
-                ->where('role', 'admin')
-                ->exists();
-
-            abort_if(! $isSender && ! $isAdmin, 403, 'Not allowed');
-
-            $message->deleted_at = now();
-            $message->save();
-
-            return response()->json(['message' => 'Deleted for everyone']);
-        }
-
-        // delete-for-me
-        MessageDeletion::updateOrCreate(
-            ['message_id' => $message->id, 'user_id' => $me->id],
-            ['deleted_at' => now()]
-        );
-
-        return response()->json(['message' => 'Deleted for you']);
+        return response()->json([
+            'status' => true,
+            'data' => ['message' => 'Deleted for everyone'],
+        ]);
     }
 
-    /**
-     * POST /threads/{thread}/read
-     * Mark all messages in thread as read for current user
-     */
-    public function markThreadRead(Request $request, Thread $thread)
+    public function markThreadRead(Request $request, Thread $thread): JsonResponse
     {
         $me = $request->user();
-
-        abort_if($thread->company_id !== $me->company_id, 404);
-        ChatAuth::ensureMember($thread->id, $me->id);
-
-        $msgIds = Message::where('thread_id', $thread->id)
-            ->whereNull('deleted_at')
-            ->where('sender_id', '!=', $me->id)
-            ->pluck('id');
+        $this->authorize('view', $thread);
 
         $now = now();
-        foreach ($msgIds as $mid) {
-            MessageRead::updateOrCreate(
-                ['message_id' => $mid, 'user_id' => $me->id],
-                ['read_at' => $now]
-            );
-        }
 
-        return response()->json(['message' => 'Marked as read','code' => 200]);
+        DB::transaction(function () use ($thread, $me, $now) {
+            ThreadRead::query()->upsert([
+                [
+                    'thread_id' => $thread->id,
+                    'user_id' => $me->id,
+                    'last_read_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ],
+            ], ['thread_id', 'user_id'], ['last_read_at', 'updated_at']);
+
+            $messageIds = Message::query()
+                ->where('thread_id', $thread->id)
+                ->where('sender_id', '!=', $me->id)
+                ->whereNull('deleted_for_all_at')
+                ->whereDoesntHave('deletions', function (Builder $q) use ($me) {
+                    $q->where('user_id', $me->id)->whereNotNull('deleted_at');
+                })
+                ->pluck('id');
+
+            if ($messageIds->isNotEmpty()) {
+                $rows = $messageIds->map(function ($messageId) use ($thread, $me, $now) {
+                    return [
+                        'message_id' => $messageId,
+                        'thread_id' => $thread->id,
+                        'user_id' => $me->id,
+                        'seen_at' => $now,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                })->all();
+
+                MessageRead::query()->upsert(
+                    $rows,
+                    ['message_id', 'user_id'],
+                    ['thread_id', 'seen_at', 'updated_at']
+                );
+            }
+
+            DB::afterCommit(function () use ($thread, $me, $now) {
+                event(new ThreadReadUpdated($thread->id, $me->id, $now->toISOString()));
+            });
+        });
+
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'thread_id' => $thread->id,
+                'user_id' => $me->id,
+                'last_read_at' => $now->toISOString(),
+            ],
+        ]);
     }
 
-    /**
-     * GET /messages/{message}/reads
-     * Response: seen[] / unseen[] (kone seen karyu nathi)
-     */
-    public function messageReads(Request $request, Message $message)
+    public function messageReads(Request $request, Message $message): JsonResponse
     {
         $me = $request->user();
+        $this->authorize('view', $message);
+
         $thread = $message->thread;
-
-        abort_if(! $thread, 404);
-        abort_if($thread->company_id !== $me->company_id, 404);
-        ChatAuth::ensureMember($thread->id, $me->id);
-
-        // active members only
-        $members = ThreadMember::where('thread_id', $thread->id)
+        $members = ThreadMember::query()
+            ->where('thread_id', $thread->id)
             ->whereNull('left_at')
-            ->with('user:id,first_name,avatar_path')
+            ->with('user:id,first_name,last_name,avatar_path,p_image')
             ->get();
 
-        $readUserIds = MessageRead::where('message_id', $message->id)
-            ->whereNotNull('read_at')
-            ->pluck('user_id')
-            ->toArray();
+        $memberIds = $members->pluck('user_id')->all();
+        $threadReads = ThreadRead::query()
+            ->where('thread_id', $thread->id)
+            ->whereIn('user_id', $memberIds)
+            ->get()
+            ->keyBy('user_id');
 
         $seen = [];
         $unseen = [];
 
-        foreach ($members as $m) {
-            if (! $m->user) {
+        foreach ($members as $member) {
+            if (! $member->user) {
                 continue;
             }
 
-            // optionally: sender always seen (UI choice)
-            if ($m->user->id === $message->sender_id) {
-                $seen[] = $m->user;
-
+            if ((int) $member->user_id === (int) $message->sender_id) {
+                $seen[] = [
+                    'id' => $member->user->id,
+                    'first_name' => $member->user->first_name,
+                    'avatar_path' => $member->user->avatar_path ?: $member->user->p_image,
+                    'seen_at' => optional($message->created_at)->toISOString(),
+                ];
                 continue;
             }
 
-            if (in_array($m->user->id, $readUserIds)) {
-                $seen[] = $m->user;
+            $threadRead = $threadReads->get($member->user_id);
+            $lastReadAt = $threadRead?->last_read_at;
+
+            if ($lastReadAt && $message->created_at && $lastReadAt->greaterThanOrEqualTo($message->created_at)) {
+                $seen[] = [
+                    'id' => $member->user->id,
+                    'first_name' => $member->user->first_name,
+                    'avatar_path' => $member->user->avatar_path ?: $member->user->p_image,
+                    'seen_at' => $lastReadAt->toISOString(),
+                ];
             } else {
-                $unseen[] = $m->user;
+                $unseen[] = [
+                    'id' => $member->user->id,
+                    'first_name' => $member->user->first_name,
+                    'avatar_path' => $member->user->avatar_path ?: $member->user->p_image,
+                ];
             }
         }
 
         return response()->json([
+            'status' => true,
             'message_id' => $message->id,
             'seen' => $seen,
             'unseen' => $unseen,
         ]);
+    }
+
+    private function ensureThreadNotBlocked(Thread $thread, int $senderId): void
+    {
+        if ($thread->type !== 'direct') {
+            return;
+        }
+
+        $memberIds = ThreadMember::query()
+            ->where('thread_id', $thread->id)
+            ->whereNull('left_at')
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($memberIds->count() < 2) {
+            return;
+        }
+
+        $otherId = (int) $memberIds->first(fn ($id) => $id !== $senderId);
+        if (! $otherId) {
+            return;
+        }
+
+        $isBlocked = UserBlock::query()
+            ->betweenUsers((int) $thread->company_id, $senderId, $otherId)
+            ->exists();
+
+        abort_if($isBlocked, 403, 'Chat blocked');
     }
 }

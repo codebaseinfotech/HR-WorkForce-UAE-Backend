@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\TaskAssignmentController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\ThreadAdminController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\Api\ThreadController;
 use App\Http\Controllers\Api\UsersController;
@@ -110,6 +111,8 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     });
 
     // block/unblock
+    Route::post('/block', [BlockController::class, 'blockById']);
+    Route::delete('/unblock', [BlockController::class, 'unblockById']);
     Route::post('/users/{user}/block', [BlockController::class, 'block']);
     Route::delete('/users/{user}/block', [BlockController::class, 'unblock']);
 
@@ -119,6 +122,10 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::post('/threads/group', [ThreadController::class, 'createGroup']);
     Route::post('/threads/{thread}/members', [ThreadController::class, 'addMembers']);
     Route::post('/threads/{thread}/leave', [ThreadController::class, 'leave']);
+    Route::get('/threads/{thread}/members', [ThreadAdminController::class, 'members']);
+    Route::post('/threads/{thread}/admins', [ThreadAdminController::class, 'promote']);
+    Route::delete('/threads/{thread}/admins/{user}', [ThreadAdminController::class, 'demote']);
+    Route::delete('/threads/{thread}/admins', [ThreadAdminController::class, 'demote']);
 
     // messages
     Route::get('/threads/{thread}/messages', [MessageController::class, 'list']);
