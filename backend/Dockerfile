@@ -4,9 +4,14 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     git \
-    curl
+    curl \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libzip-dev
 
-RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install gd pdo pdo_mysql zip
 
 WORKDIR /var/www/html
 
@@ -16,10 +21,6 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 
 RUN composer install --no-dev --optimize-autoloader
 
-RUN php artisan key:generate || true
-
 EXPOSE 10000
 
-CMD php artisan migrate --force && \
-    php artisan db:seed --force || true && \
-    php artisan serve --host=0.0.0.0 --port=10000
+CMD sh -c "php artisan migrate --force || true; php artisan db:seed --force || true; php artisan serve --host=0.0.0.0 --port=10000"
