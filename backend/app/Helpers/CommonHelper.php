@@ -23,10 +23,7 @@ if (! function_exists('authUser')) {
     function authUser()
     {
         if (! auth('api')->check()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
+            return \App\Support\ApiErrorResponse::make('Unauthorized access', 401);
         }
 
         return auth('api')->user();

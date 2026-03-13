@@ -83,7 +83,7 @@ class TaskAssignmentController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Team has no members',
-            ]);
+            ], 422);
         }
 
         foreach ($userIds as $uid) {
