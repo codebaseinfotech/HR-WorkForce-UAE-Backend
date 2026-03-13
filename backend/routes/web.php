@@ -11,3 +11,22 @@ Route::get('/run-secret-commands-123', function () {
 
     return nl2br(Artisan::output());
 });
+
+Route::get('/', function () {
+    return response()->json([
+        'status' => true,
+        'message' => 'Laravel app is live on Render'
+    ]);
+});
+
+Route::get('/test', function () {
+    return 'OK';
+});
+
+Route::get('/health', function () {
+    return response()->json([
+        'app' => config('app.name'),
+        'env' => config('app.env'),
+        'status' => 'running'
+    ]);
+});
