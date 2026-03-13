@@ -38,7 +38,7 @@ class AttendanceController extends Controller
 
         // Helpers
         $fmtTime = function ($t) use ($tz) {
-            if (! $t) {
+            if (!$t) {
                 return null;
             }
 
@@ -63,14 +63,14 @@ class AttendanceController extends Controller
 
             $inDT = \Carbon\Carbon::createFromFormat(
                 'Y-m-d H:i',
-                $date.' '.substr($attendance->check_in, 0, 5),
+                $date . ' ' . substr($attendance->check_in, 0, 5),
                 $tz
             );
 
             $outDT = $attendance->check_out
                 ? \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $date.' '.substr($attendance->check_out, 0, 5),
+                    $date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
                 )
                 : now()->setTimezone($tz);
@@ -81,12 +81,12 @@ class AttendanceController extends Controller
             if ($attendance->break_in && $attendance->break_out) {
                 $bInDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $date.' '.substr($attendance->break_in, 0, 5),
+                    $date . ' ' . substr($attendance->break_in, 0, 5),
                     $tz
                 );
                 $bOutDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $date.' '.substr($attendance->break_out, 0, 5),
+                    $date . ' ' . substr($attendance->break_out, 0, 5),
                     $tz
                 );
                 $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
@@ -101,12 +101,12 @@ class AttendanceController extends Controller
             if ($attendance->overtime_in && $attendance->overtime_out) {
                 $otInDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $date.' '.substr($attendance->overtime_in, 0, 5),
+                    $date . ' ' . substr($attendance->overtime_in, 0, 5),
                     $tz
                 );
                 $otOutDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $date.' '.substr($attendance->overtime_out, 0, 5),
+                    $date . ' ' . substr($attendance->overtime_out, 0, 5),
                     $tz
                 );
                 $sessionOvertime = max($otInDT->diffInMinutes($otOutDT, false), 0);
@@ -121,7 +121,7 @@ class AttendanceController extends Controller
 
             'user' => [
                 'id' => $authUser->id,
-                'name' => trim(($authUser->first_name ?? '').' '.($authUser->last_name ?? '')),
+                'name' => trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? '')),
                 'company_id' => $authUser->company_id,
                 'company_name' => optional($authUser->company)->name,
                 'current_time' => now()->setTimezone($tz)->format('h:i A'),
@@ -150,14 +150,14 @@ class AttendanceController extends Controller
 
                 if ($a->check_in && $a->check_out) {
 
-                    $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date.' '.substr($a->check_in, 0, 5));
-                    $outDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date.' '.substr($a->check_out, 0, 5));
+                    $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_in, 0, 5));
+                    $outDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_out, 0, 5));
 
                     $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
 
                     if ($a->break_in && $a->break_out) {
-                        $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date.' '.substr($a->break_in, 0, 5));
-                        $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date.' '.substr($a->break_out, 0, 5));
+                        $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_in, 0, 5));
+                        $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_out, 0, 5));
                         $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
                     }
 
@@ -185,7 +185,6 @@ class AttendanceController extends Controller
         $authUser = Auth::user();
         $userId = $authUser->id;
         $tz = 'Asia/Kolkata';
-
         $validator = Validator::make($request->all(), [
             'company_id' => 'required|exists:companies,id',
             'date' => 'required|date',
@@ -216,7 +215,7 @@ class AttendanceController extends Controller
             ->findOrFail($request->company_id);
 
         $allowedRadius = (int) ($company->radius ?? 100);
-        if (! $allowedRadius || $allowedRadius < 100) {
+        if (!$allowedRadius || $allowedRadius < 100) {
             $allowedRadius = 100;
         }
 
@@ -246,7 +245,7 @@ class AttendanceController extends Controller
 
         $wsQuery = \App\Models\WorkSchedule::query()
             ->where('company_id', $company->id)
-            ->when($roleId, fn ($q) => $q->where('role_id', $roleId))
+            ->when($roleId, fn($q) => $q->where('role_id', $roleId))
             ->where(function ($q) use ($request) {
                 $q->whereNull('effective_from')->orWhere('effective_from', '<=', $request->date);
             })
@@ -257,7 +256,7 @@ class AttendanceController extends Controller
 
         $workSchedule = $wsQuery->first();
 
-        if (! $workSchedule) {
+        if (!$workSchedule) {
             $workSchedule = \App\Models\WorkSchedule::where('company_id', $company->id)
                 ->whereNull('role_id')
                 ->latest('id')
@@ -271,8 +270,8 @@ class AttendanceController extends Controller
         $shiftStartHM = \Carbon\Carbon::parse($shiftStart)->format('H:i');
         $shiftEndHM = \Carbon\Carbon::parse($shiftEnd)->format('H:i');
 
-        $shiftStartDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$shiftStartHM, $tz);
-        $shiftEndDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$shiftEndHM, $tz);
+        $shiftStartDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftStartHM, $tz);
+        $shiftEndDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftEndHM, $tz);
 
         $shiftTotalMinutes = max($shiftStartDT->diffInMinutes($shiftEndDT, false), 0);
         $shiftWorkMinutes = max($shiftTotalMinutes - $breakDefaultMinutes, 0);
@@ -293,7 +292,7 @@ class AttendanceController extends Controller
         // =========================
         //  RULES (only if action sent)
         // =========================
-        if (! empty($request->action)) {
+        if (!empty($request->action)) {
             switch ($request->action) {
 
                 case 'check_in':
@@ -307,7 +306,7 @@ class AttendanceController extends Controller
                     break;
 
                 case 'check_out':
-                    if (! $attendance->check_in) {
+                    if (!$attendance->check_in) {
                         return response()->json([
                             'success' => false,
                             'message' => 'You must check_in first before check_out.',
@@ -320,7 +319,7 @@ class AttendanceController extends Controller
                         ], 400);
                     }
                     // if overtime running, first close overtime
-                    if ($attendance->overtime_in && ! $attendance->overtime_out) {
+                    if ($attendance->overtime_in && !$attendance->overtime_out) {
                         return response()->json([
                             'success' => false,
                             'message' => 'Please end overtime (overtime_out) before check_out.',
@@ -332,14 +331,14 @@ class AttendanceController extends Controller
                 case 'break_in':
                 case 'break_out':
                     // ❌ No break allowed during overtime session
-                    if ($attendance->overtime_in && ! $attendance->overtime_out) {
+                    if ($attendance->overtime_in && !$attendance->overtime_out) {
                         return response()->json([
                             'success' => false,
                             'message' => 'Break not allowed in overtime session.',
                         ], 400);
                     }
 
-                    if (! $attendance->check_in) {
+                    if (!$attendance->check_in) {
                         return response()->json([
                             'success' => false,
                             'message' => 'You must check_in first before marking break.',
@@ -361,7 +360,7 @@ class AttendanceController extends Controller
                         }
                         $attendance->break_in = $time;
                     } else {
-                        if (! $attendance->break_in) {
+                        if (!$attendance->break_in) {
                             return response()->json([
                                 'success' => false,
                                 'message' => 'You must mark break_in before break_out.',
@@ -379,14 +378,14 @@ class AttendanceController extends Controller
 
                 case 'overtime_in':
                     // must have check_in at least
-                    if (! $attendance->check_in) {
+                    if (!$attendance->check_in) {
                         return response()->json([
                             'success' => false,
                             'message' => 'You must check_in first before overtime.',
                         ], 400);
                     }
 
-                    if ($attendance->overtime_in && ! $attendance->overtime_out) {
+                    if ($attendance->overtime_in && !$attendance->overtime_out) {
                         return response()->json([
                             'success' => false,
                             'message' => 'Overtime already started.',
@@ -394,8 +393,8 @@ class AttendanceController extends Controller
                     }
 
                     // only after shift end OR after check_out
-                    $reqNowDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $attendance->date.' '.$time, $tz);
-                    if (! $attendance->check_out && $reqNowDT->lessThan($shiftEndDT)) {
+                    $reqNowDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $attendance->date . ' ' . $time, $tz);
+                    if (!$attendance->check_out && $reqNowDT->lessThan($shiftEndDT)) {
                         return response()->json([
                             'success' => false,
                             'message' => 'Overtime can start only after shift end time.',
@@ -408,7 +407,7 @@ class AttendanceController extends Controller
                     break;
 
                 case 'overtime_out':
-                    if (! $attendance->overtime_in) {
+                    if (!$attendance->overtime_in) {
                         return response()->json([
                             'success' => false,
                             'message' => 'You must overtime_in first.',
@@ -436,13 +435,13 @@ class AttendanceController extends Controller
 
                 $inDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $attendance->date.' '.substr($attendance->check_in, 0, 5),
+                    $attendance->date . ' ' . substr($attendance->check_in, 0, 5),
                     $tz
                 );
 
                 $outDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $attendance->date.' '.substr($attendance->check_out, 0, 5),
+                    $attendance->date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
                 );
 
@@ -452,12 +451,12 @@ class AttendanceController extends Controller
                 if ($attendance->break_in && $attendance->break_out) {
                     $bInDT = \Carbon\Carbon::createFromFormat(
                         'Y-m-d H:i',
-                        $attendance->date.' '.substr($attendance->break_in, 0, 5),
+                        $attendance->date . ' ' . substr($attendance->break_in, 0, 5),
                         $tz
                     );
                     $bOutDT = \Carbon\Carbon::createFromFormat(
                         'Y-m-d H:i',
-                        $attendance->date.' '.substr($attendance->break_out, 0, 5),
+                        $attendance->date . ' ' . substr($attendance->break_out, 0, 5),
                         $tz
                     );
 
@@ -473,7 +472,7 @@ class AttendanceController extends Controller
             if ($attendance->check_out) {
                 $outDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $attendance->date.' '.substr($attendance->check_out, 0, 5),
+                    $attendance->date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
                 );
 
@@ -487,12 +486,12 @@ class AttendanceController extends Controller
             if ($attendance->overtime_in && $attendance->overtime_out) {
                 $otInDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $attendance->date.' '.substr($attendance->overtime_in, 0, 5),
+                    $attendance->date . ' ' . substr($attendance->overtime_in, 0, 5),
                     $tz
                 );
                 $otOutDT = \Carbon\Carbon::createFromFormat(
                     'Y-m-d H:i',
-                    $attendance->date.' '.substr($attendance->overtime_out, 0, 5),
+                    $attendance->date . ' ' . substr($attendance->overtime_out, 0, 5),
                     $tz
                 );
                 $sessionOvertime = max($otInDT->diffInMinutes($otOutDT, false), 0);
@@ -513,7 +512,7 @@ class AttendanceController extends Controller
 
         if ($attendance->check_in && $nowDT->greaterThanOrEqualTo($shiftEndDT)) {
             // if overtime session already started & not ended -> don't show button
-            if (! ($attendance->overtime_in && ! $attendance->overtime_out)) {
+            if (!($attendance->overtime_in && !$attendance->overtime_out)) {
                 $isShowOvertime = true;
             }
         }
@@ -528,7 +527,7 @@ class AttendanceController extends Controller
 
         // Helpers
         $fmtTime = function ($t) use ($tz) {
-            if (! $t) {
+            if (!$t) {
                 return null;
             }
 
@@ -556,16 +555,16 @@ class AttendanceController extends Controller
         $workMinutes = 0;
 
         if ($today && $today->check_in) {
-            $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date.' '.substr($today->check_in, 0, 5), $tz);
+            $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_in, 0, 5), $tz);
             $outDT = $today->check_out
-                ? \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date.' '.substr($today->check_out, 0, 5), $tz)
+                ? \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_out, 0, 5), $tz)
                 : now()->setTimezone($tz);
 
             $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
 
             if ($today->break_in && $today->break_out) {
-                $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date.' '.substr($today->break_in, 0, 5), $tz);
-                $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date.' '.substr($today->break_out, 0, 5), $tz);
+                $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_in, 0, 5), $tz);
+                $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_out, 0, 5), $tz);
                 $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
             }
 
@@ -622,7 +621,7 @@ class AttendanceController extends Controller
 
             'user' => [
                 'id' => $authUser->id,
-                'name' => trim(($authUser->first_name ?? '').' '.($authUser->last_name ?? '')),
+                'name' => trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? '')),
                 'company_id' => $authUser->company_id,
                 'company_name' => $company->name,
                 'current_time' => now()->setTimezone($tz)->format('h:i A'),
@@ -718,7 +717,7 @@ class AttendanceController extends Controller
             ->where('role_id', $user->role_id)
             ->first();
 
-        if (! $schedule) {
+        if (!$schedule) {
             return response()->json([
                 'status' => false,
                 'message' => 'Work schedule not set for your role',
@@ -731,7 +730,7 @@ class AttendanceController extends Controller
             ->where('user_id', $user->id)
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
             ->get()
-            ->keyBy(fn ($a) => Carbon::parse($a->date)->toDateString());
+            ->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
 
         $leaveRows = LeaveRequest::where('company_id', $companyId)
             ->where('user_id', $user->id)
@@ -773,7 +772,7 @@ class AttendanceController extends Controller
                 $weeklyOffDays++;
             }
 
-            $isWorkingDay = (! $isHoliday && ! $isWeekOff);
+            $isWorkingDay = (!$isHoliday && !$isWeekOff);
             if ($isWorkingDay) {
                 $workingDays++;
             }
@@ -860,7 +859,7 @@ class AttendanceController extends Controller
             'status' => true,
             'user' => [
                 'id' => $user->id,
-                'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
                 'company_id' => $companyId,
             ],
             'range' => [
@@ -889,7 +888,7 @@ class AttendanceController extends Controller
     {
         $now = now()->setTimezone($tz);
 
-        if (! empty($data['from']) && ! empty($data['to'])) {
+        if (!empty($data['from']) && !empty($data['to'])) {
             return [Carbon::parse($data['from'], $tz)->startOfDay(), Carbon::parse($data['to'], $tz)->startOfDay()];
         }
 
@@ -1004,12 +1003,12 @@ class AttendanceController extends Controller
 
         $user = Auth::user();
 
-        $filename = 'attendance_report_'.$user->id.'_'.now()->format('Ymd_His').'.xlsx';
+        $filename = 'attendance_report_' . $user->id . '_' . now()->format('Ymd_His') . '.xlsx';
 
         return Excel::download(
-    new AttendanceReportExport($user, $data),
-    $filename,
-    \Maatwebsite\Excel\Excel::XLSX
-);
+            new AttendanceReportExport($user, $data),
+            $filename,
+            \Maatwebsite\Excel\Excel::XLSX
+        );
     }
 }

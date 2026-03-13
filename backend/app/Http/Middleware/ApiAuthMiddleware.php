@@ -2,10 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ApiErrorResponse;
 use Closure;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ApiAuthMiddleware
 {
@@ -17,34 +20,11 @@ class ApiAuthMiddleware
      public function handle(Request $request, Closure $next)
     {
         try {
-
             if (! $user = JWTAuth::parseToken()->authenticate()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'User not found'
-                ], 401);
+                return ApiErrorResponse::make('Unauthorized access', 401);
             }
-
-        } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Token expired'
-            ], 401);
-
-        } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Token invalid'
-            ], 401);
-
-        } catch (JWTException $e) {
-
-            return response()->json([
-                'status' => false,
-                'message' => 'Token not provided'
-            ], 401);
+        } catch (TokenExpiredException|TokenInvalidException|JWTException $e) {
+            return ApiErrorResponse::make('Unauthorized access', 401);
         }
 
         return $next($request);

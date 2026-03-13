@@ -93,7 +93,7 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get('company/list/{id?}', [CompanyController::class, 'index']);
     Route::delete('company/delete/{id}', [CompanyController::class, 'delete']);
 
-    Route::prefix(' ')->group(function () {
+    Route::prefix('attendances')->group(function () {
         Route::get('/all', [AttendanceController::class, 'index']); // List all attendances
         Route::post('/mark', [AttendanceController::class, 'mark']); // Mark attendance
         Route::get('/report', [AttendanceController::class, 'report']);
