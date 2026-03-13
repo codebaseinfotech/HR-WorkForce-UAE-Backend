@@ -12,12 +12,17 @@ class SuperAdminSeeder extends Seeder
 {
     public function run()
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        User::truncate();
-        Role::truncate();
-
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            User::truncate();
+            Role::truncate();
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        } elseif (DB::getDriverName() === 'pgsql') {
+            DB::statement('TRUNCATE TABLE users, roles RESTART IDENTITY CASCADE');
+        } else {
+            User::query()->delete();
+            Role::query()->delete();
+        }
 
         /*
         |---------------------------------------

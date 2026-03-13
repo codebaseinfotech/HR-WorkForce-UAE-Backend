@@ -2,6 +2,24 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+
+
+Route::get('/db-check', function () {
+    try {
+        DB::connection()->getPdo();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Database connected successfully',
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage(),
+        ], 500);
+    }
+});
 
 Route::get('/run-secret-commands-123', function () {
 
