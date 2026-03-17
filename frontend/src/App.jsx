@@ -15,8 +15,6 @@ import Dashboard from './pages/dashboard/Dashboard';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import CreateUser from './pages/superadmin/CreateUser';
 import UsersList from './pages/superadmin/UsersList';
-import CompanyDetails from './pages/superadmin/CompanyDetails';
-import CompanyRequests from './pages/superadmin/CompanyRequests';
 
 // Staff Management
 import StaffList from './pages/staff/StaffList';
@@ -91,33 +89,6 @@ function App() {
         element={
           <ProtectedRoute path="/superadmin/users-list">
             <UsersList />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/company/:id"
-        element={
-          <ProtectedRoute path="/superadmin/company/:id">
-            <CompanyDetails />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/superadmin/company-requests"
-        element={
-          <ProtectedRoute path="/superadmin/company-requests">
-            <CompanyRequests />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/company-requests/:id/reject"
-        element={
-          <ProtectedRoute path="/superadmin/company-requests">
-            <CompanyRequests />
           </ProtectedRoute>
         }
       />

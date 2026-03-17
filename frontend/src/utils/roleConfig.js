@@ -13,9 +13,6 @@ export const rolePermissions = {
         '/superadmin/dashboard',
         '/superadmin/create-user',
         '/superadmin/users-list',
-        '/superadmin/company-requests',
-        '/superadmin/company/:id',
-        '/staff/list', // View only, cannot create
     ],
     [ROLES.COMPANY]: [
         '/dashboard',
@@ -50,20 +47,9 @@ export const roleMenuItems = {
             icon: 'FiUserPlus'
         },
         {
-            label: 'Company Requests',
-            path: '/superadmin/company-requests',
-            icon: 'FiInbox'
-        },
-        {
             label: 'Companies List',
             path: '/superadmin/users-list',
             icon: 'FiUsers'
-        },
-        {
-            label: 'Staff Directory',
-            path: '/staff/list',
-            icon: 'FiFolder',
-            badge: 'View Only'
         }
     ],
     [ROLES.COMPANY]: [

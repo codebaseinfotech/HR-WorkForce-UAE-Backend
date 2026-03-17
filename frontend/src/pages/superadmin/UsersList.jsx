@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     Box,
     Table,
@@ -18,14 +19,24 @@ import {
     Icon,
     Flex,
     Tooltip,
+    useDisclosure,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalFooter,
+    ModalBody,
+    ModalCloseButton,
+    Spinner,
+    Divider,
 } from '@chakra-ui/react';
-import { FiEdit, FiTrash2, FiMail, FiPhone, FiMapPin, FiEye, FiPlus, FiUsers, FiBriefcase, FiRefreshCw } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiMail, FiPhone, FiMapPin, FiEye, FiPlus, FiBriefcase, FiRefreshCw, FiUsers } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/common/Card';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
-import { useGetCompaniesQuery, useDeleteCompanyMutation } from '../../store/apiSlice';
+import { useGetCompaniesQuery, useDeleteCompanyMutation, useGetCompanyDashboardQuery } from '../../store/apiSlice';
 
 const UsersList = () => {
     const toast = useToast();
@@ -63,8 +74,17 @@ const UsersList = () => {
         }
     };
 
-    const handleViewCompany = (companyId) => {
-        navigate(`/superadmin/company/${companyId}`);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [selectedCompany, setSelectedCompany] = useState(null);
+
+    const { data: companyDetails, isFetching: fetchingDetails } = useGetCompanyDashboardQuery(
+        selectedCompany?.id,
+        { skip: !selectedCompany?.id }
+    );
+
+    const handleViewCompany = (company) => {
+        setSelectedCompany(company);
+        onOpen();
     };
 
     if (isLoading) {
@@ -274,7 +294,7 @@ const UsersList = () => {
                                                                 variant="ghost"
                                                                 colorScheme="blue"
                                                                 aria-label="View company"
-                                                                onClick={() => handleViewCompany(company.id)}
+                                                                onClick={() => handleViewCompany(company)}
                                                             />
                                                         </Tooltip>
                                                         <Tooltip label="Edit Company">
@@ -320,6 +340,105 @@ const UsersList = () => {
                     </Card>
                 )}
             </VStack>
+
+            {/* View Company Modal */}
+            <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
+                <ModalOverlay bg="blackAlpha.400" backdropFilter="blur(4px)" />
+                <ModalContent borderRadius="xl" overflow="hidden">
+                    <ModalHeader bgGradient="linear(to-r, #1a1a2e, #16213e)" color="white" py={5}>
+                        <HStack spacing={3}>
+                            <Icon as={FiBriefcase} boxSize={5} color="purple.300" />
+                            <Text fontSize="lg">Company Details</Text>
+                        </HStack>
+                    </ModalHeader>
+                    <ModalCloseButton color="white" top={4} />
+                    
+                    <ModalBody py={6} px={8}>
+                        {selectedCompany && (
+                            <VStack spacing={5} align="stretch">
+                                <Flex align="center" gap={4}>
+                                    <Avatar
+                                        size="lg"
+                                        name={selectedCompany.name}
+                                        src={selectedCompany.logo !== '-' ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}/storage/${selectedCompany.logo}` : undefined}
+                                        bg="purple.100"
+                                        color="purple.600"
+                                    />
+                                    <Box>
+                                        <Heading size="md" color="gray.800">{selectedCompany.name}</Heading>
+                                        <Text fontSize="sm" color="gray.500" mt={1}>ID: {selectedCompany.id}</Text>
+                                        <Badge
+                                            mt={2}
+                                            colorScheme={selectedCompany.status === 1 ? 'green' : 'gray'}
+                                            borderRadius="full"
+                                            px={3}
+                                            py={0.5}
+                                        >
+                                            {selectedCompany.status === 1 ? 'Active' : 'Inactive'}
+                                        </Badge>
+                                    </Box>
+                                </Flex>
+
+                                <Divider my={2} />
+
+                                <VStack align="start" spacing={3}>
+                                    <HStack>
+                                        <Icon as={FiUsers} color="gray.400" />
+                                        <Text fontSize="sm" fontWeight="600" w="80px">Owner:</Text>
+                                        <Text fontSize="sm" color="gray.700">
+                                            {selectedCompany.name_first !== '-' ? `${selectedCompany.name_first} ${selectedCompany.name_last !== '-' ? selectedCompany.name_last : ''}` : '—'}
+                                        </Text>
+                                    </HStack>
+                                    <HStack>
+                                        <Icon as={FiMail} color="gray.400" />
+                                        <Text fontSize="sm" fontWeight="600" w="80px">Email:</Text>
+                                        <Text fontSize="sm" color="gray.700">{selectedCompany.email !== '-' ? selectedCompany.email : '—'}</Text>
+                                    </HStack>
+                                    <HStack>
+                                        <Icon as={FiPhone} color="gray.400" />
+                                        <Text fontSize="sm" fontWeight="600" w="80px">Phone:</Text>
+                                        <Text fontSize="sm" color="gray.700">{selectedCompany.phone !== '-' ? selectedCompany.phone : '—'}</Text>
+                                    </HStack>
+                                    <HStack>
+                                        <Icon as={FiMapPin} color="gray.400" />
+                                        <Text fontSize="sm" fontWeight="600" w="80px">Location:</Text>
+                                        <Text fontSize="sm" color="gray.700">
+                                            {selectedCompany.city !== '-' || selectedCompany.address !== '-' 
+                                                ? `${selectedCompany.address !== '-' ? selectedCompany.address : ''}${selectedCompany.address !== '-' && selectedCompany.city !== '-' ? ', ' : ''}${selectedCompany.city !== '-' ? selectedCompany.city : ''}` 
+                                                : '—'}
+                                        </Text>
+                                    </HStack>
+                                </VStack>
+
+                                <Box bg="purple.50" p={4} borderRadius="lg" mt={2}>
+                                    {fetchingDetails ? (
+                                        <Flex justify="center" align="center" gap={3}>
+                                            <Spinner size="sm" color="purple.500" />
+                                            <Text fontSize="sm" color="purple.700">Loading manager count...</Text>
+                                        </Flex>
+                                    ) : (
+                                        <HStack justify="space-between">
+                                            <HStack>
+                                                <Icon as={FiUsers} color="purple.600" />
+                                                <Text fontSize="sm" fontWeight="600" color="purple.800">Total Managers:</Text>
+                                            </HStack>
+                                            <Text fontSize="lg" fontWeight="bold" color="purple.700">
+                                                {companyDetails?.data?.managersCount || 0}
+                                            </Text>
+                                        </HStack>
+                                    )}
+                                </Box>
+                            </VStack>
+                        )}
+                    </ModalBody>
+                    
+                    <ModalFooter bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+                        <Button onClick={onClose} w="full" variant="outline" borderColor="gray.300">
+                            Close
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </DashboardLayout>
     );
 };
