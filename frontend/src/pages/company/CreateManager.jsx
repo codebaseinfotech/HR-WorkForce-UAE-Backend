@@ -84,22 +84,29 @@ const CreateManager = () => {
     return (
         <DashboardLayout>
             <VStack align="stretch" spacing={6}>
-                {/* Header */}
-                <Box>
-                    <Heading
-                        size="xl"
-                        mb={2}
-                        bgGradient="linear(to-r, primary.600, purple.600)"
-                        bgClip="text"
-                    >
-                        Create New Manager
-                    </Heading>
-                    <Text color="gray.600" fontSize="lg">
-                        Add a manager who can manage staff members in your company
-                    </Text>
+                {/* ── Hero Header ── */}
+                <Box
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="3xl"
+                    p={{ base: 6, md: 8 }}
+                    position="relative"
+                    overflow="hidden"
+                    boxShadow="xl"
+                >
+                    <Box position="absolute" top="-20%" right="-5%" w="300px" h="300px" bg="purple.500" opacity="0.1" filter="blur(60px)" borderRadius="full" />
+                    <Box position="absolute" bottom="-20%" left="10%" w="200px" h="200px" bg="blue.500" opacity="0.1" filter="blur(40px)" borderRadius="full" />
+                    
+                    <Box position="relative" zIndex={1}>
+                        <Heading size="xl" color="white" mb={2} letterSpacing="-0.02em">
+                            Create New Manager
+                        </Heading>
+                        <Text color="whiteAlpha.800" fontSize="md">
+                            Add a manager who can manage staff members in your company
+                        </Text>
+                    </Box>
                 </Box>
 
-                <Card>
+                <Card border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                     <form onSubmit={handleSubmit}>
                         <VStack align="stretch" spacing={8}>
                             {/* Personal Information */}

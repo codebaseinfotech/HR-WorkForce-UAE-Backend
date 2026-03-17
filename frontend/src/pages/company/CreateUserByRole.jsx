@@ -163,14 +163,17 @@ const CreateUserByRole = () => {
             <VStack align="stretch" spacing={6}>
                 {/* Hero Header */}
                 <Box
-                    bgGradient="linear(135deg, #667eea 0%, #764ba2 100%)"
-                    borderRadius="2xl"
-                    p={{ base: 5, md: 8 }}
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="3xl"
+                    p={{ base: 6, md: 8 }}
                     position="relative"
                     overflow="hidden"
+                    boxShadow="xl"
                 >
-                    <Box position="absolute" top="-30px" right="-30px" w="150px" h="150px" borderRadius="full" bg="whiteAlpha.100" />
-                    <Box position="absolute" bottom="-20px" left="40%" w="100px" h="100px" borderRadius="full" bg="whiteAlpha.50" />
+                    <Box position="absolute" top="-20%" right="-5%" w="300px" h="300px" bg="purple.500" opacity="0.1" filter="blur(60px)" borderRadius="full" />
+                    <Box position="absolute" bottom="-20%" left="10%" w="200px" h="200px" bg="blue.500" opacity="0.1" filter="blur(40px)" borderRadius="full" />
+                    <Box position="absolute" top="10%" right="15%" w="100px" h="100px" bg="cyan.500" opacity="0.15" filter="blur(30px)" borderRadius="full" />
+
                     <Button
                         variant="unstyled"
                         display="flex"
@@ -234,7 +237,7 @@ const CreateUserByRole = () => {
                 <form onSubmit={handleSubmit}>
                     <VStack align="stretch" spacing={5}>
                         {/* Profile Photo & Signature Upload */}
-                        <Card>
+                        <Card border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                             <Text fontSize="md" fontWeight="700" color="gray.800" mb={4}>
                                 Profile & Signature
                             </Text>
@@ -317,7 +320,7 @@ const CreateUserByRole = () => {
                         </Card>
 
                         {/* Personal Information */}
-                        <Card>
+                        <Card border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                             <Text fontSize="md" fontWeight="700" color="gray.800" mb={5}>
                                 Personal Information
                             </Text>
@@ -458,7 +461,7 @@ const CreateUserByRole = () => {
                         </Card>
 
                         {/* Role & Company */}
-                        <Card>
+                        <Card border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                             <Text fontSize="md" fontWeight="700" color="gray.800" mb={5}>
                                 Role & Company
                             </Text>

@@ -18,7 +18,7 @@ const EmptyState = ({
 }) => {
     return (
         <Center py={12} {...props}>
-            <VStack spacing={4} textAlign="center">
+            <VStack spacing={4} textAlign="center" >
                 <Icon
                     as={icon}
                     boxSize={12}

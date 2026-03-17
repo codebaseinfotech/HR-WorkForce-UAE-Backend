@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 export const apiSlice = createApi({
     reducerPath: 'api',
@@ -16,7 +16,7 @@ export const apiSlice = createApi({
             return headers;
         },
     }),
-    tagTypes: ['User', 'Staff', 'Company', 'CompanyRequest', 'Manager', 'Stats', 'Task', 'TaskComment', 'TaskDocument', 'TaskChat', 'LeaveType', 'LeavePolicy', 'WorkSchedule'],
+    tagTypes: ['User', 'Staff', 'Company', 'CompanyRequest', 'Manager', 'Stats', 'Task', 'TaskComment', 'TaskDocument', 'TaskChat', 'LeaveType', 'LeavePolicy', 'WorkSchedule', 'Attendance'],
     endpoints: (builder) => ({
         // Auth endpoints
         login: builder.mutation({
@@ -516,6 +516,35 @@ export const apiSlice = createApi({
             }),
             providesTags: ['Stats'],
         }),
+
+        // ── Attendance endpoints ─────────────────────────────────────────
+        getAllAttendances: builder.query({
+            query: ({ date } = {}) => {
+                const p = new URLSearchParams();
+                if (date) p.append('date', date);
+                return `/api/v1/attendances/all?${p.toString()}`;
+            },
+            providesTags: ['Attendance'],
+        }),
+        getAttendanceReport: builder.query({
+            query: ({ range, from, to } = {}) => {
+                const p = new URLSearchParams();
+                if (range) p.append('range', range);
+                if (from)  p.append('from', from);
+                if (to)    p.append('to', to);
+                return `/api/v1/attendances/report?${p.toString()}`;
+            },
+            providesTags: ['Attendance'],
+        }),
+        getAttendanceExportUrl: builder.query({
+            query: ({ range, from, to } = {}) => {
+                const p = new URLSearchParams();
+                if (range) p.append('range', range);
+                if (from)  p.append('from', from);
+                if (to)    p.append('to', to);
+                return `/api/v1/attendances/my-attendance/report/export?${p.toString()}`;
+            },
+        }),
     }),
 });
 
@@ -618,5 +647,10 @@ export const {
 
     // Work Schedules
     useAddUpdateWorkScheduleMutation,
+
+    // Attendance
+    useGetAllAttendancesQuery,
+    useGetAttendanceReportQuery,
+    useGetAttendanceExportUrlQuery,
 } = apiSlice;
 

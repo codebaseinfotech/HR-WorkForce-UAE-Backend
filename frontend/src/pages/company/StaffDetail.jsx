@@ -1,6 +1,6 @@
 /**
  * StaffDetail — /company/staff/:staffId
- * Tabs: Leave Management | Work Schedule | Overview
+ * Tabs: Leave Management | Work Schedule | Attendance | Overview
  */
 import { useState } from 'react';
 import {
@@ -17,7 +17,7 @@ import {
 import {
     FiArrowLeft, FiCalendar, FiClock, FiPlus, FiTrash2, FiEdit3,
     FiSun, FiMoon, FiBriefcase, FiUser, FiMail, FiPhone,
-    FiSave,
+    FiSave, FiDownload, FiCheckCircle, FiXCircle, FiSunrise, FiSunset, FiCoffee, FiActivity,
 } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -35,6 +35,7 @@ import {
     useAddUpdateLeavePolicyMutation,
     useAddUpdateWorkScheduleMutation,
     useGetRolesQuery,
+    useGetAttendanceReportQuery,
 } from '../../store/apiSlice';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -98,14 +99,14 @@ const LeaveTypesCard = () => {
                 <EmptyState title="No leave types" description="Create your first leave type" icon={FiCalendar} />
             ) : (
                 <Box overflowX="auto">
-                    <Table variant="simple" size="sm">
-                        <Thead>
-                            <Tr>
-                                <Th bg="green.600" color="white" fontSize="xs" py={3} borderBottom="none">Code</Th>
-                                <Th bg="green.600" color="white" fontSize="xs" py={3} borderBottom="none">Name</Th>
-                                <Th bg="green.600" color="white" fontSize="xs" py={3} borderBottom="none" textAlign="center">Actions</Th>
-                            </Tr>
-                        </Thead>
+                    <Table variant="simple" size="sm" w="100%" style={{ minWidth: '800px' }}>
+                            <Thead>
+                                <Tr>
+                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Code</Th>
+                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Name</Th>
+                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="center">Actions</Th>
+                                </Tr>
+                            </Thead>
                         <Tbody>
                             {list.map((t, i) => (
                                 <Tr key={t.id} bg={i % 2 === 0 ? 'white' : 'gray.50'} _hover={{ bg: 'green.50' }}>
@@ -268,13 +269,13 @@ const LeavePoliciesCard = ({ companyId }) => {
                             </HStack>
                             {p.items?.length > 0 && (
                                 <Box overflowX="auto">
-                                    <Table size="xs" variant="simple">
+                                    <Table size="xs" variant="simple" w="100%" style={{ minWidth: '800px' }}>
                                         <Thead>
                                             <Tr>
-                                                <Th fontSize="2xs" py={1}>Leave Type</Th>
-                                                <Th fontSize="2xs" py={1} isNumeric>Quota</Th>
-                                                <Th fontSize="2xs" py={1}>Carry Fwd</Th>
-                                                <Th fontSize="2xs" py={1}>Encash</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Leave Type</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" isNumeric>Quota</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Carry Fwd</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Encash</Th>
                                             </Tr>
                                         </Thead>
                                         <Tbody>
@@ -539,6 +540,203 @@ const WorkScheduleCard = ({ companyId }) => {
     );
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  ATTENDANCE CARD
+// ═══════════════════════════════════════════════════════════════════════════
+const ATT_RANGES = [
+    { key: 'week',         label: 'This Week' },
+    { key: 'month',        label: 'This Month' },
+    { key: 'last_7_days',  label: 'Last 7 Days' },
+    { key: 'last_30_days', label: 'Last 30 Days' },
+];
+
+const attStatusCfg = {
+    present:    { color: 'green',  label: 'Present',    icon: FiCheckCircle },
+    absent:     { color: 'red',    label: 'Absent',     icon: FiXCircle },
+    leave:      { color: 'orange', label: 'Leave',      icon: FiCalendar },
+    holiday:    { color: 'purple', label: 'Holiday',    icon: FiSunrise },
+    weekly_off: { color: 'gray',   label: 'Weekly Off', icon: FiCoffee },
+    'N/A':      { color: 'gray',   label: '—',          icon: FiClock },
+};
+
+const fmtMins = (m) => {
+    if (!m || m <= 0) return '—';
+    const h = Math.floor(m / 60); const mi = m % 60;
+    return h > 0 ? `${h}h ${mi}m` : `${mi}m`;
+};
+
+const fmtTime = (t) => {
+    if (!t) return '—';
+    if (t.includes('AM') || t.includes('PM')) return t;
+    const [hh, mm] = t.split(':');
+    const h = parseInt(hh, 10);
+    return `${h % 12 || 12}:${mm} ${h >= 12 ? 'PM' : 'AM'}`;
+};
+
+const AttendanceCard = () => {
+    const toast = useToast();
+    const [rangeIdx, setRangeIdx] = useState(0);
+    const range = ATT_RANGES[rangeIdx].key;
+
+    const { data, isLoading, isFetching } = useGetAttendanceReportQuery(
+        { range },
+        { refetchOnMountOrArgChange: true }
+    );
+
+    const summary   = data?.summary || {};
+    const days      = data?.days || [];
+    const dateRange = data?.range || {};
+
+    // ── Export handler ──
+    const handleExport = () => {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const url = `${baseUrl}/api/v1/attendances/my-attendance/report/export?range=${range}`;
+
+        fetch(url, { headers: { Authorization: `Bearer ${token}`, platform: 'web' } })
+            .then(res => { if (!res.ok) throw new Error(); return res.blob(); })
+            .then(blob => {
+                const burl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = burl; a.download = `attendance_${range}.xlsx`; a.click();
+                window.URL.revokeObjectURL(burl);
+                toast({ title: 'Downloaded!', status: 'success', duration: 2000 });
+            })
+            .catch(() => toast({ title: 'Export failed', status: 'error', duration: 3000 }));
+    };
+
+    return (
+        <VStack spacing={5} align="stretch">
+            {/* Range tabs + export */}
+            <Flex justify="space-between" align="center" flexWrap="wrap" gap={3}>
+                <Tabs index={rangeIdx} onChange={setRangeIdx} variant="unstyled" size="sm">
+                    <TabList bg="white" borderRadius="xl" p={1} gap={1}
+                        border="1px solid" borderColor="gray.100">
+                        {ATT_RANGES.map(r => (
+                            <Tab key={r.key}
+                                _selected={{ bg: 'teal.500', color: 'white', shadow: 'md' }}
+                                borderRadius="lg" fontWeight="600" fontSize="sm" px={3} py={1.5}
+                                transition="all 0.2s">{r.label}</Tab>
+                        ))}
+                    </TabList>
+                </Tabs>
+                <Button leftIcon={<FiDownload />} size="sm"
+                    bgGradient="linear(to-r, teal.400, green.400)" color="white"
+                    borderRadius="lg" _hover={{ opacity: 0.9 }}
+                    onClick={handleExport} isLoading={isFetching}>
+                    Export XLS
+                </Button>
+            </Flex>
+
+            {/* Date range info */}
+            <Text fontSize="xs" color="gray.500" fontWeight="500">
+                {dateRange.from} — {dateRange.to}
+            </Text>
+
+            {/* Summary cards */}
+            <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3}>
+                {[
+                    { label: 'Present',  val: summary.present_days,   color: 'green',  icon: FiCheckCircle },
+                    { label: 'Absent',   val: summary.absent_days,    color: 'red',    icon: FiXCircle },
+                    { label: 'Leave',    val: summary.leave_days,     color: 'orange', icon: FiCalendar },
+                    { label: 'Worked',   val: summary.total_worked,   color: 'blue',   icon: FiClock },
+                    { label: 'Overtime', val: summary.total_overtime,  color: 'purple', icon: FiActivity },
+                ].map(c => (
+                    <Box key={c.label} p={3} bg="white" border="1px solid" borderColor="gray.100"
+                        borderRadius="xl" _hover={{ shadow: 'md' }} transition="all 0.2s">
+                        <HStack spacing={2}>
+                            <Box p={2} bg={`${c.color}.50`} borderRadius="lg">
+                                <Icon as={c.icon} boxSize={4} color={`${c.color}.500`} />
+                            </Box>
+                            <VStack align="start" spacing={0}>
+                                <Text fontSize="2xs" color="gray.400" fontWeight="600">{c.label}</Text>
+                                <Text fontSize="md" fontWeight="800" color="gray.800">{c.val ?? '—'}</Text>
+                            </VStack>
+                        </HStack>
+                    </Box>
+                ))}
+            </SimpleGrid>
+
+            {/* Table */}
+            {isLoading || isFetching ? <Flex justify="center" py={6}><Spinner color="teal.500" size="lg" /></Flex> : days.length === 0 ? (
+                <EmptyState title="No data" description="No attendance records for this range" icon={FiCalendar} />
+            ) : (
+                <Card p={0} overflow="hidden" border="1px solid" borderColor="gray.100">
+                    <Box overflowX="auto">
+                        <Table size="sm" variant="simple" w="100%" style={{ minWidth: '800px' }}>
+                            <Thead>
+                                <Tr>
+                                    {['Date', 'Day', 'Status', 'Check In', 'Check Out', 'OT', 'Total'].map((h) => (
+                                        <Th key={h} bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">{h}</Th>
+                                    ))}
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {days.map((day, i) => {
+                                    const sc = attStatusCfg[day.status] || attStatusCfg['N/A'];
+                                    const att = day.attendance;
+                                    return (
+                                        <Tr key={day.date} bg={i % 2 === 0 ? 'white' : 'gray.50'}
+                                            _hover={{ bg: 'teal.50' }} transition="all 0.15s">
+                                            <Td py={2.5} fontWeight="600" fontSize="sm">{day.date}</Td>
+                                            <Td fontSize="sm" color="gray.600">{day.day}</Td>
+                                            <Td>
+                                                <HStack spacing={1}>
+                                                    <Icon as={sc.icon} boxSize={3} color={`${sc.color}.500`} />
+                                                    <Badge colorScheme={sc.color} borderRadius="full" px={2} fontSize="2xs" fontWeight="700">
+                                                        {day.holiday_title || sc.label}
+                                                    </Badge>
+                                                </HStack>
+                                            </Td>
+                                            <Td>
+                                                <HStack spacing={1}>
+                                                    <Icon as={FiSunrise} boxSize={3} color="green.400" />
+                                                    <Text fontSize="sm" color="gray.700">{att ? fmtTime(att.check_in) : '—'}</Text>
+                                                </HStack>
+                                            </Td>
+                                            <Td>
+                                                <HStack spacing={1}>
+                                                    <Icon as={FiSunset} boxSize={3} color="red.400" />
+                                                    <Text fontSize="sm" color="gray.700">{att ? fmtTime(att.check_out) : '—'}</Text>
+                                                </HStack>
+                                            </Td>
+                                            <Td>
+                                                <Text fontSize="sm" fontWeight="600"
+                                                    color={(att?.shift_overtime_minutes || att?.session_overtime_minutes) ? 'purple.600' : 'gray.400'}>
+                                                    {att ? fmtMins((att.shift_overtime_minutes || 0) + (att.session_overtime_minutes || 0)) : '—'}
+                                                </Text>
+                                            </Td>
+                                            <Td>
+                                                <Badge colorScheme="blue" borderRadius="full" px={2} fontSize="2xs" fontWeight="700">
+                                                    {att ? fmtMins(att.final_total_minutes) : '—'}
+                                                </Badge>
+                                            </Td>
+                                        </Tr>
+                                    );
+                                })}
+                            </Tbody>
+                        </Table>
+                    </Box>
+                </Card>
+            )}
+
+            {/* Info bar */}
+            <Box bg="gray.50" p={3} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <HStack spacing={3}>
+                    <Box p={2} bg="teal.50" borderRadius="lg">
+                        <Icon as={FiClock} boxSize={4} color="teal.500" />
+                    </Box>
+                    <Text fontSize="xs" color="gray.600">
+                        <strong>Working Days:</strong> {summary.working_days ?? '—'} &nbsp;|&nbsp;
+                        <strong>Holidays:</strong> {summary.holiday_days ?? '—'} &nbsp;|&nbsp;
+                        <strong>Weekly Off:</strong> {summary.weekly_off_days ?? '—'}
+                    </Text>
+                </HStack>
+            </Box>
+        </VStack>
+    );
+};
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  MAIN STAFF DETAIL PAGE
@@ -570,7 +768,7 @@ const StaffDetail = () => {
     }
 
     const name   = `${staffMember.first_name || staffMember.firstName || ''} ${staffMember.last_name || staffMember.lastName || ''}`.trim();
-    const role   = typeof staffMember.role === 'object' ? staffMember.role?.name : staffMember.role || 'Staff';
+    const role   = typeof staffMember.role === 'object' ? staffMember.role?.name : staffMember.role || 'Employee';
     const active = staffMember.status === 'active' || staffMember.status === 1;
 
     return (
@@ -620,12 +818,15 @@ const StaffDetail = () => {
 
                 {/* ── Tabs ── */}
                 <Tabs colorScheme="purple" size="md" variant="enclosed-colored">
-                    <TabList bg="gray.50" borderRadius="xl" p={1} border="1px solid" borderColor="gray.200">
+                    <TabList bg="gray.50" borderRadius="xl" p={1} border="1px solid" borderColor="gray.200" overflowX="auto">
                         <Tab borderRadius="lg" fontWeight="600" fontSize="sm" _selected={{ bg: 'white', color: 'green.600', shadow: 'sm' }}>
                             <HStack spacing={1.5}><Icon as={FiCalendar} boxSize={4} /><Text>Leave Management</Text></HStack>
                         </Tab>
                         <Tab borderRadius="lg" fontWeight="600" fontSize="sm" _selected={{ bg: 'white', color: 'blue.600', shadow: 'sm' }}>
                             <HStack spacing={1.5}><Icon as={FiClock} boxSize={4} /><Text>Work Schedule</Text></HStack>
+                        </Tab>
+                        <Tab borderRadius="lg" fontWeight="600" fontSize="sm" _selected={{ bg: 'white', color: 'teal.600', shadow: 'sm' }}>
+                            <HStack spacing={1.5}><Icon as={FiCheckCircle} boxSize={4} /><Text>Attendance</Text></HStack>
                         </Tab>
                         <Tab borderRadius="lg" fontWeight="600" fontSize="sm" _selected={{ bg: 'white', color: 'purple.600', shadow: 'sm' }}>
                             <HStack spacing={1.5}><Icon as={FiUser} boxSize={4} /><Text>Overview</Text></HStack>
@@ -644,6 +845,11 @@ const StaffDetail = () => {
                         {/* Work Schedule */}
                         <TabPanel p={0}>
                             <WorkScheduleCard companyId={companyId} />
+                        </TabPanel>
+
+                        {/* Attendance */}
+                        <TabPanel p={0}>
+                            <AttendanceCard />
                         </TabPanel>
 
                         {/* Overview */}

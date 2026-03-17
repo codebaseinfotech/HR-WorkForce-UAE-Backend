@@ -147,7 +147,7 @@ const StaffList = () => {
         error,
         refetch,
     } = useGetUserFetchQuery(
-        { company_id: companyId, role: 'staff' },
+        { company_id: companyId, role: 'Employee' },
         { skip: !companyId }
     );
 
@@ -183,49 +183,72 @@ const StaffList = () => {
     return (
         <DashboardLayout>
             <VStack align="stretch" spacing={6}>
-                {/* Header */}
-                <Flex
-                    justify="space-between"
-                    align={{ base: 'flex-start', md: 'center' }}
-                    flexDir={{ base: 'column', md: 'row' }}
-                    gap={4}
+                {/* ── Hero Header ── */}
+                <Box
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="3xl"
+                    p={{ base: 6, md: 8 }}
+                    position="relative"
+                    overflow="hidden"
+                    boxShadow="xl"
                 >
-                    <Box>
-                        <Heading
-                            size="xl"
-                            mb={1}
-                            bgGradient="linear(to-r, primary.600, purple.600)"
-                            bgClip="text"
-                        >
-                            Staff Management
-                        </Heading>
-                        <Text color="gray.500" fontSize="sm">
-                            {filteredStaff.length} {filteredStaff.length === 1 ? 'member' : 'members'} — use the ⋮ menu to assign managers
-                        </Text>
-                    </Box>
-                    <HStack spacing={3}>
-                        <Tooltip label="Refresh">
-                            <IconButton
-                                icon={<FiRefreshCw />}
-                                variant="outline"
-                                borderRadius="xl"
-                                onClick={refetch}
-                                aria-label="Refresh"
-                            />
-                        </Tooltip>
-                        <Button
-                            leftIcon={<FiPlus />}
-                            size="lg"
-                            borderRadius="xl"
-                            onClick={() => navigate('/staff/add')}
-                        >
-                            Add Staff
-                        </Button>
-                    </HStack>
-                </Flex>
+                    {/* Background abstract elements */}
+                    <Box position="absolute" top="-20%" right="-5%" w="300px" h="300px" bg="purple.500" opacity="0.1" filter="blur(60px)" borderRadius="full" />
+                    <Box position="absolute" bottom="-20%" left="10%" w="200px" h="200px" bg="blue.500" opacity="0.1" filter="blur(40px)" borderRadius="full" />
+                    <Box position="absolute" top="10%" right="15%" w="100px" h="100px" bg="cyan.500" opacity="0.15" filter="blur(30px)" borderRadius="full" />
 
-                {/* Search */}
-                <Card>
+                    <Flex
+                        direction={{ base: 'column', md: 'row' }}
+                        justify="space-between"
+                        align={{ base: 'flex-start', md: 'center' }}
+                        gap={6}
+                        position="relative"
+                        zIndex={1}
+                    >
+                        <Box>
+                            <Badge bg="whiteAlpha.200" color="white" px={3} py={1} borderRadius="full" fontSize="xs" mb={3} backdropFilter="blur(10px)">
+                                Team Roster
+                            </Badge>
+                            <Heading size="xl" color="white" mb={2} letterSpacing="-0.02em">
+                                Staff Management
+                            </Heading>
+                            <Text color="whiteAlpha.800" fontSize="sm">
+                                {filteredStaff.length} {filteredStaff.length === 1 ? 'member' : 'members'} available • Use ⋮ to assign managers
+                            </Text>
+                        </Box>
+
+                        <HStack spacing={3}>
+                            <Tooltip label="Refresh">
+                                <IconButton
+                                    icon={<FiRefreshCw />}
+                                    variant="outline"
+                                    color="white"
+                                    borderColor="whiteAlpha.400"
+                                    borderRadius="xl"
+                                    onClick={refetch}
+                                    aria-label="Refresh"
+                                    _hover={{ bg: 'whiteAlpha.200' }}
+                                />
+                            </Tooltip>
+                            <Button
+                                leftIcon={<FiPlus />}
+                                size="lg"
+                                bg="purple.500"
+                                color="white"
+                                _hover={{ bg: 'purple.600', transform: 'translateY(-2px)', shadow: 'md' }}
+                                _active={{ bg: 'purple.700' }}
+                                borderRadius="xl"
+                                transition="all 0.2s"
+                                onClick={() => navigate('/staff/add')}
+                            >
+                                Add Staff
+                            </Button>
+                        </HStack>
+                    </Flex>
+                </Box>
+
+                {/* ── Search & Filter Bar ── */}
+                <Card bg="white" p={4} borderRadius="2xl" border="1px solid" borderColor="gray.100" shadow="sm">
                     <InputGroup size="lg">
                         <InputLeftElement pointerEvents="none">
                             <Icon as={FiSearch} color="gray.400" />
@@ -235,14 +258,18 @@ const StaffList = () => {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             borderRadius="xl"
-                            focusBorderColor="purple.400"
+                            bg="gray.50"
+                            border="none"
+                            _hover={{ bg: 'gray.100' }}
+                            _focus={{ bg: 'white', ring: 2, ringColor: 'purple.400' }}
+                            fontSize="sm"
                         />
                     </InputGroup>
                 </Card>
 
                 {/* Staff Table */}
                 {filteredStaff.length === 0 ? (
-                    <Card>
+                    <Card border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                         <EmptyState
                             title={searchTerm ? 'No staff found' : 'No staff members yet'}
                             description={searchTerm ? 'Try a different search term' : 'Start by adding your first staff member'}
@@ -254,6 +281,7 @@ const StaffList = () => {
                                         onClick={() => navigate('/staff/add')}
                                         mt={4}
                                         borderRadius="xl"
+                                        colorScheme="purple"
                                     >
                                         Add First Staff Member
                                     </Button>
@@ -262,18 +290,18 @@ const StaffList = () => {
                         />
                     </Card>
                 ) : (
-                    <Card p={0} overflow="hidden">
+                    <Card p={0} overflow="hidden" border="1px solid" borderColor="gray.100" shadow="sm" borderRadius="2xl">
                         <Box overflowX="auto">
-                            <Table variant="simple" size="sm">
-                                <Thead bg="purple.50">
+                            <Table variant="simple" size="md" w="100%" style={{ minWidth: '1000px' }}>
+                                <Thead>
                                     <Tr>
-                                        <Th color="purple.700" fontSize="xs" py={4}>Staff Member</Th>
-                                        <Th color="purple.700" fontSize="xs">Email</Th>
-                                        <Th color="purple.700" fontSize="xs">Phone</Th>
-                                        <Th color="purple.700" fontSize="xs">Gender</Th>
-                                        <Th color="purple.700" fontSize="xs">Role</Th>
-                                        <Th color="purple.700" fontSize="xs">Status</Th>
-                                        <Th color="purple.700" fontSize="xs">Actions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Staff Member</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Email</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Phone</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Gender</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Role</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Status</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="right" pr={6}>Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>

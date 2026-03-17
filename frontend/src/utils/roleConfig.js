@@ -24,14 +24,15 @@ export const rolePermissions = {
         '/company/create-user',
         '/company/roles',
         '/company/permissions/:roleId',
-        '/staff/add',
         '/staff/list',
         '/checkin-checkout',
+        '/company/all-attendance',
     ],
     [ROLES.MANAGER]: [
         '/dashboard',
-        '/staff/add',
         '/staff/list',
+        '/checkin-checkout',
+        '/company/all-attendance',
     ]
 };
 
@@ -92,14 +93,14 @@ export const roleMenuItems = {
             icon: 'FiFolder'
         },
         {
-            label: 'Add Staff',
-            path: '/staff/add',
-            icon: 'FiUserCheck'
-        },
-        {
             label: 'Check-in/Check-out',
             path: '/checkin-checkout',
             icon: 'FiClock'
+        },
+        {
+            label: 'Team Attendance',
+            path: '/company/all-attendance',
+            icon: 'FiUsers'
         }
     ],
     [ROLES.MANAGER]: [
@@ -114,9 +115,14 @@ export const roleMenuItems = {
             icon: 'FiUsers'
         },
         {
-            label: 'Add Staff',
-            path: '/staff/add',
-            icon: 'FiUserPlus'
+            label: 'Check-in/Check-out',
+            path: '/checkin-checkout',
+            icon: 'FiClock'
+        },
+        {
+            label: 'Team Attendance',
+            path: '/company/all-attendance',
+            icon: 'FiUsers'
         }
     ]
 };

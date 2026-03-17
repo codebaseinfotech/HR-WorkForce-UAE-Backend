@@ -28,6 +28,8 @@ import {
     FormLabel,
     Input,
     Tooltip,
+    Flex,
+    Center,
 } from '@chakra-ui/react';
 import { FiEye, FiPlus, FiShield, FiTrash2, FiEdit, FiRefreshCw } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -143,47 +145,59 @@ const Roles = () => {
     return (
         <DashboardLayout>
             <VStack align="stretch" spacing={6}>
-                {/* Header */}
-                <HStack justify="space-between" flexWrap="wrap" gap={4}>
-                    <Box>
-                        <Heading
-                            size="xl"
-                            mb={2}
-                            bgGradient="linear(to-r, primary.600, purple.600)"
-                            bgClip="text"
-                        >
-                            Roles Management
-                        </Heading>
-                        <Text color="gray.600" fontSize="lg">
-                            {roles.length} {roles.length === 1 ? 'role' : 'roles'} configured
-                        </Text>
-                    </Box>
-                    <HStack spacing={3}>
-                        <Button
-                            variant="outline"
-                            onClick={refetch}
-                            leftIcon={<Icon as={FiRefreshCw} />}
-                            size="md"
-                        >
-                            Refresh
-                        </Button>
-                        <Button
-                            leftIcon={<FiPlus />}
-                            size="lg"
-                            onClick={onOpen}
-                            bgGradient="linear(to-r, primary.500, purple.500)"
-                            color="white"
-                            _hover={{ bgGradient: 'linear(to-r, primary.600, purple.600)', transform: 'translateY(-1px)', shadow: 'lg' }}
-                            _active={{ transform: 'translateY(0)' }}
-                            transition="all 0.2s"
-                        >
-                            Add New Role
-                        </Button>
-                    </HStack>
-                </HStack>
+                {/* ── Hero Header ── */}
+                <Box
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="2xl" p={{ base: 6, md: 8 }} position="relative" overflow="hidden"
+                >
+                    <Box position="absolute" top="-40px" right="-40px" w="180px" h="180px" borderRadius="full" bg="whiteAlpha.50" />
+                    <Box position="absolute" bottom="-20px" left="15%" w="120px" h="120px" borderRadius="full" bg="whiteAlpha.30" />
+
+                    <Flex justify="space-between" align="center" flexWrap="wrap" gap={4} position="relative">
+                        <Box>
+                            <HStack spacing={3} mb={2}>
+                                <Center p={2} bg="whiteAlpha.200" borderRadius="lg" backdropFilter="blur(10px)">
+                                    <Icon as={FiShield} boxSize={6} color="white" />
+                                </Center>
+                                <Heading size="lg" color="white" letterSpacing="-0.02em">
+                                    Roles Management
+                                </Heading>
+                            </HStack>
+                            <Text color="whiteAlpha.800" fontSize="sm">
+                                Configure system roles and permissions for your workforce
+                            </Text>
+                        </Box>
+
+                        <HStack spacing={3}>
+                            <Button
+                                variant="outline"
+                                color="white"
+                                _hover={{ bg: 'whiteAlpha.200' }}
+                                borderColor="whiteAlpha.300"
+                                onClick={refetch}
+                                leftIcon={<Icon as={FiRefreshCw} />}
+                                size="sm"
+                            >
+                                Refresh
+                            </Button>
+                            <Button
+                                leftIcon={<FiPlus />}
+                                size="sm"
+                                onClick={onOpen}
+                                colorScheme="purple"
+                                bg="purple.500"
+                                _hover={{ bg: 'purple.400', transform: 'translateY(-1px)', shadow: 'md' }}
+                                _active={{ transform: 'translateY(0)' }}
+                                transition="all 0.2s"
+                            >
+                                Add New Role
+                            </Button>
+                        </HStack>
+                    </Flex>
+                </Box>
 
                 {roles.length === 0 ? (
-                    <Card>
+                    <Card border="1px solid" borderColor="gray.100" shadow="sm">
                         <EmptyState
                             title="No roles found"
                             description="Create your first role to get started"
@@ -193,6 +207,7 @@ const Roles = () => {
                                     leftIcon={<FiPlus />}
                                     onClick={onOpen}
                                     mt={4}
+                                    colorScheme="purple"
                                 >
                                     Create First Role
                                 </Button>
@@ -200,17 +215,17 @@ const Roles = () => {
                         />
                     </Card>
                 ) : (
-                    <Card p={0} overflow="hidden">
-                        <Box overflow="auto">
-                            <Table variant="simple">
-                                <Thead bg="gray.50">
+                    <Card p={0} overflow="hidden" border="1px solid" borderColor="gray.100" shadow="sm">
+                        <Box overflowX="auto">
+                            <Table variant="simple" w="100%" style={{ minWidth: '800px' }}>
+                                <Thead>
                                     <Tr>
-                                        <Th fontSize="xs" color="gray.600" py={4}>#</Th>
-                                        <Th fontSize="xs" color="gray.600" py={4}>Role Name</Th>
-                                        <Th fontSize="xs" color="gray.600" py={4}>Slug</Th>
-                                        <Th fontSize="xs" color="gray.600" py={4} isNumeric>Permissions</Th>
-                                        <Th fontSize="xs" color="gray.600" py={4}>Status</Th>
-                                        <Th fontSize="xs" color="gray.600" py={4} textAlign="center">Actions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap" w="60px">#</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Role Name</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Slug</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" isNumeric whiteSpace="nowrap">Permissions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Status</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="center" whiteSpace="nowrap">Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>
@@ -219,25 +234,28 @@ const Roles = () => {
                                         return (
                                         <Tr
                                             key={role.id}
-                                            _hover={{ bg: isSystemRole ? 'gray.100' : 'gray.50' }}
-                                            transition="background 0.15s"
-                                            opacity={isSystemRole ? 0.6 : 1}
-                                            bg={isSystemRole ? 'gray.50' : 'white'}
+                                            _hover={{ bg: isSystemRole ? 'gray.50' : 'purple.50' }}
+                                            transition="all 0.15s"
+                                            opacity={isSystemRole ? 0.75 : 1}
+                                            bg={index % 2 === 0 ? 'white' : 'gray.50'}
                                         >
-                                            <Td>
-                                                <Text fontWeight="medium" color="gray.500">{index + 1}</Text>
+                                            <Td py={4}>
+                                                <Text fontWeight="600" color="gray.500" fontSize="sm">{index + 1}</Text>
                                             </Td>
-                                            <Td>
+                                            <Td py={4}>
                                                 <HStack spacing={3}>
-                                                    <Box p={2} borderRadius="lg" bg="primary.50">
-                                                        <Icon as={FiShield} color="primary.500" boxSize={4} />
+                                                    <Center p={2} borderRadius="lg" bg={isSystemRole ? 'gray.200' : 'purple.100'}>
+                                                        <Icon as={FiShield} color={isSystemRole ? 'gray.600' : 'purple.600'} boxSize={4} />
+                                                    </Center>
+                                                    <Box>
+                                                        <Text fontWeight="600" color="gray.800" fontSize="sm">
+                                                            {role.name}
+                                                        </Text>
+                                                        {isSystemRole && <Text fontSize="xs" color="gray.500">System Role</Text>}
                                                     </Box>
-                                                    <Text fontWeight="semibold" color="gray.800">
-                                                        {role.name}
-                                                    </Text>
                                                 </HStack>
                                             </Td>
-                                            <Td>
+                                            <Td py={4}>
                                                 <Badge
                                                     variant="subtle"
                                                     colorScheme="gray"
@@ -245,15 +263,16 @@ const Roles = () => {
                                                     fontFamily="mono"
                                                     px={2}
                                                     py={0.5}
-                                                    borderRadius="md"
+                                                    borderRadius="full"
                                                 >
                                                     {role.slug}
                                                 </Badge>
                                             </Td>
-                                            <Td isNumeric>
+                                            <Td isNumeric py={4}>
                                                 <Badge
-                                                    variant="subtle"
-                                                    colorScheme="purple"
+                                                    variant="solid"
+                                                    bg="gray.800"
+                                                    color="white"
                                                     fontSize="xs"
                                                     px={2.5}
                                                     py={0.5}
@@ -262,20 +281,20 @@ const Roles = () => {
                                                     {role.permissions?.length || 0}
                                                 </Badge>
                                             </Td>
-                                            <Td>
+                                            <Td py={4}>
                                                 <Badge
                                                     colorScheme={role.status === 1 ? 'green' : 'red'}
-                                                    fontSize="xs"
+                                                    fontSize="2xs"
                                                     px={2.5}
-                                                    py={0.5}
+                                                    py={1}
                                                     borderRadius="full"
                                                 >
-                                                    {role.status === 1 ? 'Active' : 'Inactive'}
+                                                    {role.status === 1 ? 'ACTIVE' : 'INACTIVE'}
                                                 </Badge>
                                             </Td>
-                                            <Td>
+                                            <Td py={4}>
                                                 <HStack spacing={1} justify="center">
-                                                    <Tooltip label="View Permissions" hasArrow>
+                                                    <Tooltip label="View Permissions" hasArrow placement="top">
                                                         <IconButton
                                                             icon={<FiEye />}
                                                             size="sm"
@@ -284,9 +303,10 @@ const Roles = () => {
                                                             aria-label="View permissions"
                                                             onClick={() => handleViewPermissions(role.id)}
                                                             isDisabled={isSystemRole}
+                                                            _hover={{ bg: 'green.100' }}
                                                         />
                                                     </Tooltip>
-                                                    <Tooltip label="Edit Role" hasArrow>
+                                                    <Tooltip label="Edit Role" hasArrow placement="top">
                                                         <IconButton
                                                             icon={<FiEdit />}
                                                             size="sm"
@@ -294,9 +314,10 @@ const Roles = () => {
                                                             colorScheme="blue"
                                                             aria-label="Edit role"
                                                             isDisabled={isSystemRole}
+                                                            _hover={{ bg: 'blue.100' }}
                                                         />
                                                     </Tooltip>
-                                                    <Tooltip label={isSystemRole ? 'System role' : 'Delete Role'} hasArrow>
+                                                    <Tooltip label={isSystemRole ? 'System role' : 'Delete Role'} hasArrow placement="top">
                                                         <IconButton
                                                             icon={<FiTrash2 />}
                                                             size="sm"
@@ -305,6 +326,7 @@ const Roles = () => {
                                                             aria-label="Delete role"
                                                             isDisabled={isSystemRole}
                                                             onClick={() => handleDelete(role)}
+                                                            _hover={{ bg: 'red.100' }}
                                                         />
                                                     </Tooltip>
                                                 </HStack>
@@ -320,39 +342,36 @@ const Roles = () => {
 
                 {/* Footer Stats */}
                 {roles.length > 0 && (
-                    <Card bg="primary.50" borderColor="primary.200">
-                        <HStack spacing={3}>
-                            <Icon as={FiShield} boxSize={5} color="primary.600" />
-                            <Text fontSize="sm" color="primary.900">
-                                <strong>Total Roles:</strong> {roles.length} &nbsp;|&nbsp;
-                                <strong>Active:</strong> {roles.filter(r => r.status === 1).length} &nbsp;|&nbsp;
-                                <strong>Total Permissions Assigned:</strong> {roles.reduce((acc, r) => acc + (r.permissions?.length || 0), 0)}
+                    <Box bg="purple.50" p={4} borderRadius="xl" border="1px solid" borderColor="purple.100">
+                        <HStack spacing={3} justify="center">
+                            <Icon as={FiShield} boxSize={5} color="purple.600" />
+                            <Text fontSize="sm" color="purple.900" fontWeight="500">
+                                Total Roles: <strong>{roles.length}</strong> &bull; Active: <strong>{roles.filter(r => r.status === 1).length}</strong> &bull; Total Permissions Assigned: <strong>{roles.reduce((acc, r) => acc + (r.permissions?.length || 0), 0)}</strong>
                             </Text>
                         </HStack>
-                    </Card>
+                    </Box>
                 )}
             </VStack>
 
             {/* Add Role Modal */}
             <Modal isOpen={isOpen} onClose={onClose} isCentered size="md">
                 <ModalOverlay bg="blackAlpha.400" backdropFilter="blur(4px)" />
-                <ModalContent borderRadius="xl" mx={4}>
+                <ModalContent borderRadius="xl" mx={4} overflow="hidden">
                     <ModalHeader
-                        bgGradient="linear(to-r, primary.500, purple.500)"
+                        bgGradient="linear(to-r, #1a1a2e, #16213e)"
                         color="white"
-                        borderTopRadius="xl"
                         py={5}
                     >
                         <HStack spacing={3}>
-                            <Icon as={FiShield} boxSize={5} />
-                            <Text>Add New Role</Text>
+                            <Icon as={FiShield} boxSize={5} color="purple.300" />
+                            <Text fontSize="lg">Add New Role</Text>
                         </HStack>
                     </ModalHeader>
-                    <ModalCloseButton color="white" />
+                    <ModalCloseButton color="white" top={4} />
                     <ModalBody py={6}>
                         <VStack spacing={5}>
                             <FormControl isRequired>
-                                <FormLabel fontWeight="semibold" fontSize="sm">Role Name</FormLabel>
+                                <FormLabel fontWeight="600" fontSize="sm" color="gray.700">Role Name</FormLabel>
                                 <Input
                                     placeholder="e.g. HR Manager"
                                     value={newRole.name}
@@ -363,12 +382,13 @@ const Roles = () => {
                                     })}
                                     size="lg"
                                     borderRadius="lg"
-                                    focusBorderColor="primary.500"
+                                    focusBorderColor="purple.500"
+                                    bg="gray.50"
                                 />
                             </FormControl>
 
                             <FormControl>
-                                <FormLabel fontWeight="semibold" fontSize="sm">Slug</FormLabel>
+                                <FormLabel fontWeight="600" fontSize="sm" color="gray.700">Slug Identifier</FormLabel>
                                 <Input
                                     placeholder="auto-generated"
                                     value={newRole.slug}
@@ -377,24 +397,29 @@ const Roles = () => {
                                     borderRadius="lg"
                                     fontFamily="mono"
                                     fontSize="sm"
-                                    focusBorderColor="primary.500"
+                                    focusBorderColor="purple.500"
+                                    bg="gray.50"
                                 />
+                                <Text fontSize="xs" color="gray.500" mt={2}>
+                                    Used internally for system reference. Usually auto-generated.
+                                </Text>
                             </FormControl>
                         </VStack>
                     </ModalBody>
-                    <ModalFooter borderTop="1px solid" borderColor="gray.100" gap={3}>
-                        <Button variant="ghost" onClick={onClose} size="lg">
+                    <ModalFooter borderTop="1px solid" borderColor="gray.100" bg="gray.50" gap={3}>
+                        <Button variant="ghost" onClick={onClose} size="md" colorScheme="gray">
                             Cancel
                         </Button>
                         <Button
                             onClick={handleAddRole}
                             isLoading={isCreating}
                             loadingText="Creating..."
-                            size="lg"
-                            bgGradient="linear(to-r, primary.500, purple.500)"
-                            color="white"
-                            _hover={{ bgGradient: 'linear(to-r, primary.600, purple.600)' }}
+                            size="md"
+                            colorScheme="purple"
+                            bg="purple.600"
+                            _hover={{ bg: 'purple.700' }}
                             px={8}
+                            borderRadius="lg"
                         >
                             Create Role
                         </Button>

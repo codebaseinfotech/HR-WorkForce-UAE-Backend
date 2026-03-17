@@ -20,7 +20,7 @@ import CompanyRequests from './pages/superadmin/CompanyRequests';
 
 // Staff Management
 import StaffList from './pages/staff/StaffList';
-import AddStaff from './pages/staff/AddStaff';
+
 
 // Company/Manager Management
 import CreateManager from './pages/company/CreateManager';
@@ -29,7 +29,9 @@ import ManagersList from './pages/company/ManagersList';
 import ManagerStaffList from './pages/company/ManagerStaffList';
 import Roles from './pages/company/Roles';
 import Permissions from './pages/company/Permissions';
+
 import StaffDetail from './pages/company/StaffDetail';
+import CompanyAttendance from './pages/company/CompanyAttendance';
 
 // Check-in/Check-out
 import CheckInCheckOut from './pages/dashboard/CheckInCheckOut';
@@ -193,6 +195,17 @@ function App() {
         }
       />
 
+
+
+      <Route
+        path="/company/all-attendance"
+        element={
+          <ProtectedRoute path="/company/all-attendance">
+            <CompanyAttendance />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/staff/list"
         element={
@@ -202,14 +215,7 @@ function App() {
         }
       />
 
-      <Route
-        path="/staff/add"
-        element={
-          <ProtectedRoute path="/staff/add">
-            <AddStaff />
-          </ProtectedRoute>
-        }
-      />
+
 
       <Route
         path="/checkin-checkout"

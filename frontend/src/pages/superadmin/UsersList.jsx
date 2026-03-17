@@ -16,8 +16,10 @@ import {
     Button,
     Avatar,
     Icon,
+    Flex,
+    Tooltip,
 } from '@chakra-ui/react';
-import { FiEdit, FiTrash2, FiMail, FiPhone, FiMapPin, FiEye, FiPlus, FiUsers } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiMail, FiPhone, FiMapPin, FiEye, FiPlus, FiUsers, FiBriefcase, FiRefreshCw } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/common/Card';
@@ -29,10 +31,10 @@ const UsersList = () => {
     const toast = useToast();
     const navigate = useNavigate();
 
-    const [deleteCompany] = useDeleteCompanyMutation();
+    const [deleteCompany, { isLoading: isDeleting }] = useDeleteCompanyMutation();
 
     // RTK Query — fetches from /api/v1/company/list
-    const { data: response, isLoading, refetch } = useGetCompaniesQuery();
+    const { data: response, isLoading, refetch, isFetching } = useGetCompaniesQuery();
 
     // API returns { status: true, data: [...] }
     const companies = response?.data || [];
@@ -76,48 +78,66 @@ const UsersList = () => {
     return (
         <DashboardLayout>
             <VStack align="stretch" spacing={6}>
-                {/* Header */}
-                <HStack justify="space-between" flexWrap="wrap" gap={4}>
-                    <Box>
-                        <Heading
-                            size="xl"
-                            mb={2}
-                            bgGradient="linear(to-r, primary.600, purple.600)"
-                            bgClip="text"
-                        >
-                            Companies Management
-                        </Heading>
-                        <Text color="gray.600" fontSize="lg">
-                            {companies.length} {companies.length === 1 ? 'company' : 'companies'} registered
-                        </Text>
-                    </Box>
-                    <HStack spacing={3}>
-                        <Button
-                            variant="outline"
-                            onClick={refetch}
-                            leftIcon={<Icon as={FiUsers} />}
-                        >
-                            Refresh
-                        </Button>
-                        <Button
-                            leftIcon={<FiPlus />}
-                            size="lg"
-                            onClick={() => navigate('/superadmin/create-user')}
-                        >
-                            Create Company
-                        </Button>
-                    </HStack>
-                </HStack>
+                {/* ── Hero Header ── */}
+                <Box
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="2xl" p={{ base: 6, md: 8 }} position="relative" overflow="hidden"
+                >
+                    <Box position="absolute" top="-50px" right="-50px" w="200px" h="200px" borderRadius="full" bg="whiteAlpha.50" />
+                    <Box position="absolute" bottom="-30px" left="20%" w="140px" h="140px" borderRadius="full" bg="whiteAlpha.30" />
 
+                    <Flex justify="space-between" align="flex-end" flexWrap="wrap" gap={4} position="relative">
+                        <Box>
+                            <Text fontSize="xs" color="whiteAlpha.500" fontWeight="600" letterSpacing="wider" textTransform="uppercase" mb={1}>
+                                Super Admin Panel
+                            </Text>
+                            <Heading size="xl" color="white" letterSpacing="-0.02em" mb={1}>
+                                Companies Management
+                            </Heading>
+                            <Text color="whiteAlpha.700" fontSize="sm">
+                                Manage all registered client companies in the system
+                            </Text>
+                        </Box>
+                        
+                        <HStack spacing={3}>
+                            <Tooltip label="Refresh data">
+                                <IconButton
+                                    icon={<FiRefreshCw />}
+                                    variant="outline"
+                                    color="white"
+                                    borderColor="whiteAlpha.400"
+                                    _hover={{ bg: 'whiteAlpha.200' }}
+                                    onClick={refetch}
+                                    isLoading={isFetching}
+                                    aria-label="Refresh"
+                                />
+                            </Tooltip>
+                            <Button
+                                leftIcon={<FiPlus />}
+                                bgGradient="linear(to-r, purple.400, blue.400)"
+                                color="white"
+                                _hover={{ bgGradient: 'linear(to-r, purple.500, blue.500)', shadow: 'md' }}
+                                onClick={() => navigate('/superadmin/create-user')}
+                            >
+                                Create Company
+                            </Button>
+                        </HStack>
+                    </Flex>
+                </Box>
+
+                {/* ── Table Container ── */}
                 {companies.length === 0 ? (
                     <Card>
                         <EmptyState
                             title="No companies found"
                             description="Create your first company to get started"
-                            icon={FiUsers}
+                            icon={FiBriefcase}
                             action={
                                 <Button
                                     leftIcon={<FiPlus />}
+                                    bgGradient="linear(to-r, purple.400, blue.400)"
+                                    color="white"
+                                    _hover={{ bgGradient: 'linear(to-r, purple.500, blue.500)' }}
                                     onClick={() => navigate('/superadmin/create-user')}
                                     mt={4}
                                 >
@@ -127,21 +147,34 @@ const UsersList = () => {
                         />
                     </Card>
                 ) : (
-                    <Card p={0} overflow="hidden">
-                        <Box overflow="auto">
-                            <Table variant="simple">
+                    <Card p={0} overflow="hidden" boxShadow="md" border="1px solid" borderColor="gray.100">
+                        <Box p={5} borderBottom="1px solid" borderColor="gray.100" bgGradient="linear(to-r, gray.50, white)">
+                            <HStack justify="space-between">
+                                <HStack spacing={3}>
+                                    <Box p={2.5} bg="purple.50" borderRadius="xl">
+                                        <Icon as={FiBriefcase} boxSize={5} color="purple.500" />
+                                    </Box>
+                                    <Heading size="sm" color="gray.800">All Registered Companies</Heading>
+                                </HStack>
+                                <Badge colorScheme="purple" borderRadius="full" px={3} py={0.5}>
+                                    {companies.length} Total
+                                </Badge>
+                            </HStack>
+                        </Box>
+                        <Box overflowX="auto">
+                            <Table variant="simple" size="sm" w="100%" style={{ minWidth: '1000px' }}>
                                 <Thead>
                                     <Tr>
-                                        <Th>Company</Th>
-                                        <Th>Owner</Th>
-                                        <Th>Contact</Th>
-                                        <Th>Location</Th>
-                                        <Th>Status</Th>
-                                        <Th>Actions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Company</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Owner</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Contact</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Location</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Status</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="right" whiteSpace="nowrap">Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>
-                                    {companies.map((company) => {
+                                    {companies.map((company, i) => {
                                         const hasLogo = company.logo && company.logo !== '-';
                                         const hasOwner = company.name_first && company.name_first !== '-';
                                         const hasEmail = company.email && company.email !== '-';
@@ -150,22 +183,22 @@ const UsersList = () => {
                                         const hasAddress = company.address && company.address !== '-';
 
                                         return (
-                                            <Tr key={company.id}>
+                                            <Tr key={company.id} bg={i % 2 === 0 ? 'white' : 'gray.50'} _hover={{ bg: 'purple.50' }} transition="all 0.15s">
                                                 {/* Company Name + Logo */}
-                                                <Td>
+                                                <Td py={3}>
                                                     <HStack spacing={3}>
                                                         <Avatar
                                                             size="md"
                                                             name={company.name}
                                                             src={hasLogo ? `${import.meta.env.VITE_API_URL?.replace('/api', '')}/storage/${company.logo}` : undefined}
-                                                            bg="primary.100"
-                                                            color="primary.600"
+                                                            bg="purple.100"
+                                                            color="purple.600"
                                                         />
                                                         <VStack align="start" spacing={0}>
-                                                            <Text fontWeight="semibold" color="gray.800">
+                                                            <Text fontWeight="700" fontSize="sm" color="gray.800">
                                                                 {company.name}
                                                             </Text>
-                                                            <Text fontSize="xs" color="gray.500">
+                                                            <Text fontSize="xs" color="gray.500" fontWeight="600">
                                                                 ID: {company.id}
                                                             </Text>
                                                         </VStack>
@@ -175,7 +208,7 @@ const UsersList = () => {
                                                 {/* Owner */}
                                                 <Td>
                                                     {hasOwner ? (
-                                                        <Text fontSize="sm" fontWeight="medium">
+                                                        <Text fontSize="sm" fontWeight="600" color="gray.700">
                                                             {company.name_first} {company.name_last !== '-' ? company.name_last : ''}
                                                         </Text>
                                                     ) : (
@@ -189,13 +222,13 @@ const UsersList = () => {
                                                         {hasEmail && (
                                                             <HStack spacing={2}>
                                                                 <Icon as={FiMail} boxSize={3.5} color="gray.400" />
-                                                                <Text fontSize="sm">{company.email}</Text>
+                                                                <Text fontSize="sm" color="gray.600">{company.email}</Text>
                                                             </HStack>
                                                         )}
                                                         {hasPhone && (
                                                             <HStack spacing={2}>
                                                                 <Icon as={FiPhone} boxSize={3.5} color="gray.400" />
-                                                                <Text fontSize="sm">{company.phone}</Text>
+                                                                <Text fontSize="sm" color="gray.600">{company.phone}</Text>
                                                             </HStack>
                                                         )}
                                                         {!hasEmail && !hasPhone && (
@@ -207,9 +240,9 @@ const UsersList = () => {
                                                 {/* Location */}
                                                 <Td>
                                                     {hasCity || hasAddress ? (
-                                                        <HStack spacing={2}>
-                                                            <Icon as={FiMapPin} boxSize={3.5} color="gray.400" />
-                                                            <Text fontSize="sm">
+                                                        <HStack spacing={2} maxW="200px">
+                                                            <Icon as={FiMapPin} boxSize={3.5} color="gray.400" flexShrink={0}/>
+                                                            <Text fontSize="sm" color="gray.600" isTruncated>
                                                                 {hasAddress ? company.address : ''}{hasAddress && hasCity ? ', ' : ''}{hasCity ? company.city : ''}
                                                             </Text>
                                                         </HStack>
@@ -221,9 +254,9 @@ const UsersList = () => {
                                                 {/* Status */}
                                                 <Td>
                                                     <Badge
-                                                        colorScheme={company.status === 1 ? 'green' : 'red'}
-                                                        fontSize="xs"
-                                                        px={2}
+                                                        colorScheme={company.status === 1 ? 'green' : 'gray'}
+                                                        fontSize="2xs"
+                                                        px={2.5}
                                                         py={0.5}
                                                         borderRadius="full"
                                                     >
@@ -232,31 +265,38 @@ const UsersList = () => {
                                                 </Td>
 
                                                 {/* Actions */}
-                                                <Td>
-                                                    <HStack spacing={2}>
-                                                        <IconButton
-                                                            icon={<FiEye />}
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorScheme="green"
-                                                            aria-label="View company"
-                                                            onClick={() => handleViewCompany(company.id)}
-                                                        />
-                                                        <IconButton
-                                                            icon={<FiEdit />}
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorScheme="blue"
-                                                            aria-label="Edit company"
-                                                        />
-                                                        <IconButton
-                                                            icon={<FiTrash2 />}
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorScheme="red"
-                                                            aria-label="Delete company"
-                                                            onClick={() => handleDelete(company.id)}
-                                                        />
+                                                <Td textAlign="right">
+                                                    <HStack spacing={1} justify="flex-end">
+                                                        <Tooltip label="View Details">
+                                                            <IconButton
+                                                                icon={<FiEye />}
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                colorScheme="blue"
+                                                                aria-label="View company"
+                                                                onClick={() => handleViewCompany(company.id)}
+                                                            />
+                                                        </Tooltip>
+                                                        <Tooltip label="Edit Company">
+                                                            <IconButton
+                                                                icon={<FiEdit />}
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                colorScheme="purple"
+                                                                aria-label="Edit company"
+                                                            />
+                                                        </Tooltip>
+                                                        <Tooltip label="Delete Company">
+                                                            <IconButton
+                                                                icon={<FiTrash2 />}
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                colorScheme="red"
+                                                                aria-label="Delete company"
+                                                                isLoading={isDeleting}
+                                                                onClick={() => handleDelete(company.id)}
+                                                            />
+                                                        </Tooltip>
                                                     </HStack>
                                                 </Td>
                                             </Tr>
@@ -268,13 +308,13 @@ const UsersList = () => {
                     </Card>
                 )}
 
-                {/* Footer with Count */}
+                {/* ── Footer Info ── */}
                 {companies.length > 0 && (
-                    <Card bg="primary.50" borderColor="primary.200">
-                        <HStack spacing={3}>
-                            <Icon as={FiUsers} boxSize={5} color="primary.600" />
-                            <Text fontSize="sm" color="primary.900">
-                                <strong>Total Companies:</strong> {companies.length}
+                    <Card bg="gray.50" border="1px solid" borderColor="gray.100" py={3}>
+                        <HStack justify="center" spacing={3}>
+                            <Icon as={FiBriefcase} boxSize={4} color="purple.500" />
+                            <Text fontSize="sm" color="gray.600" fontWeight="500">
+                                <strong>{companies.length}</strong> active companies managed by Super Admin
                             </Text>
                         </HStack>
                     </Card>
@@ -285,3 +325,4 @@ const UsersList = () => {
 };
 
 export default UsersList;
+

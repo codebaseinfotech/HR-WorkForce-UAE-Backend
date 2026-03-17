@@ -1,13 +1,13 @@
-import { Box, Stat, StatLabel, StatNumber, StatHelpText, Icon, HStack } from '@chakra-ui/react';
+import { Box, Stat, StatLabel, StatNumber, StatHelpText, Icon, HStack, Flex } from '@chakra-ui/react';
 
 /**
- * StatCard Component - Modern stat card with icon and gradient
+ * StatCard Component - Premium stat card with icon, colored top bar, and hover animation
  * 
  * @param {string} label - Stat label
  * @param {string|number} value - Stat value
  * @param {string} helpText - Helper text
  * @param {ReactElement} icon - Icon component
- * @param {string} colorScheme - Color scheme (primary, success, warning, error, info)
+ * @param {string} colorScheme - Color scheme (primary, success, warning, error, info, purple)
  */
 const StatCard = ({
     label,
@@ -23,124 +23,127 @@ const StatCard = ({
             bg: 'primary.50',
             iconBg: 'primary.100',
             iconColor: 'primary.600',
-            valueColor: 'primary.600',
-            gradient: 'linear(to-r, primary.50, primary.100)',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, primary.400, primary.600)',
         },
         success: {
             bg: 'success.50',
             iconBg: 'success.100',
             iconColor: 'success.600',
-            valueColor: 'success.600',
-            gradient: 'linear(to-r, success.50, success.100)',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, success.400, success.600)',
         },
         warning: {
             bg: 'warning.50',
             iconBg: 'warning.100',
             iconColor: 'warning.600',
-            valueColor: 'warning.600',
-            gradient: 'linear(to-r, warning.50, warning.100)',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, warning.400, warning.600)',
         },
         error: {
             bg: 'error.50',
             iconBg: 'error.100',
             iconColor: 'error.600',
-            valueColor: 'error.600',
-            gradient: 'linear(to-r, error.50, error.100)',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, error.400, error.600)',
         },
         info: {
             bg: 'info.50',
-            iconBg: 'info.100',
-            iconColor: 'info.600',
-            valueColor: 'info.600',
-            gradient: 'linear(to-r, info.50, info.100)',
+            iconBg: 'blue.100', // Override since info scale might not have 50/100 defined properly everywhere
+            iconColor: 'blue.600',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, blue.400, blue.600)',
         },
         purple: {
             bg: 'purple.50',
             iconBg: 'purple.100',
             iconColor: 'purple.600',
-            valueColor: 'purple.600',
-            gradient: 'linear(to-r, purple.50, purple.100)',
+            valueColor: 'gray.800',
+            gradient: 'linear(to-r, purple.400, purple.600)',
         },
     };
 
-    const colors = colorSchemes[colorScheme] || colorSchemes.primary;
+    const scheme = colorSchemes[colorScheme] || colorSchemes.primary;
 
     return (
         <Box
             bg="white"
             borderRadius="xl"
-            p={6}
-            boxShadow="md"
-            borderWidth="1px"
-            borderColor="gray.200"
+            boxShadow="sm"
+            border="1px solid"
+            borderColor="gray.100"
             position="relative"
             overflow="hidden"
-            transition="all 0.2s"
+            transition="all 0.3s cubic-bezier(.25,.8,.25,1)"
             _hover={{
-                boxShadow: 'lg',
-                transform: 'translateY(-2px)',
+                boxShadow: 'xl',
+                transform: 'translateY(-3px)',
             }}
             {...props}
         >
-            {/* Gradient background */}
-            <Box
-                position="absolute"
-                top={0}
-                right={-10}
-                w="150px"
-                h="150px"
-                bgGradient={colors.gradient}
-                opacity={0.3}
-                borderRadius="full"
-                filter="blur(40px)"
-            />
-
-            <HStack spacing={4} position="relative" zIndex={1}>
-                {/* Icon */}
-                {icon && (
-                    <Box
-                        bg={colors.iconBg}
-                        p={3}
-                        borderRadius="lg"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                    >
-                        <Icon as={icon} boxSize={6} color={colors.iconColor} />
-                    </Box>
-                )}
-
-                {/* Stat Content */}
-                <Stat flex={1}>
-                    <StatLabel
-                        fontSize="sm"
-                        fontWeight="medium"
-                        color="gray.600"
-                        textTransform="uppercase"
-                        letterSpacing="wide"
-                    >
-                        {label}
-                    </StatLabel>
-                    <StatNumber
-                        fontSize="3xl"
-                        fontWeight="bold"
-                        color={colors.valueColor}
-                        mt={1}
-                    >
-                        {value}
-                    </StatNumber>
-                    {helpText && (
-                        <StatHelpText fontSize="sm" color="gray.500" mb={0}>
-                            {helpText}
-                        </StatHelpText>
+            {/* Colored top bar */}
+            <Box h="4px" bgGradient={scheme.gradient} w="100%" />
+            
+            <Box p={6}>
+                <HStack spacing={5} alignItems="flex-start">
+                    {/* Icon */}
+                    {icon && (
+                        <Flex
+                            bg={scheme.iconBg}
+                            p={3.5}
+                            borderRadius="xl"
+                            alignItems="center"
+                            justifyContent="center"
+                            shadow="sm"
+                        >
+                            <Icon as={icon} boxSize={7} color={scheme.iconColor} />
+                        </Flex>
                     )}
-                    {trend && (
-                        <StatHelpText fontSize="sm" color={trend > 0 ? 'success.500' : 'error.500'} mb={0}>
-                            {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-                        </StatHelpText>
-                    )}
-                </Stat>
-            </HStack>
+
+                    {/* Stat Content */}
+                    <Stat flex={1}>
+                        <StatLabel
+                            fontSize="xs"
+                            fontWeight="700"
+                            color="gray.500"
+                            textTransform="uppercase"
+                            letterSpacing="wider"
+                            mb={1}
+                        >
+                            {label}
+                        </StatLabel>
+                        <StatNumber
+                            fontSize="3xl"
+                            fontWeight="800"
+                            color={scheme.valueColor}
+                            lineHeight="1"
+                        >
+                            {value}
+                        </StatNumber>
+                        {(helpText || trend) && (
+                            <HStack mt={2} spacing={2}>
+                                {trend && (
+                                    <Box 
+                                        as="span" 
+                                        fontWeight="600" 
+                                        color={trend > 0 ? 'green.500' : 'red.500'}
+                                        fontSize="sm"
+                                        display="flex"
+                                        alignItems="center"
+                                    >
+                                        {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
+                                    </Box>
+                                )}
+                                {helpText && (
+                                    <StatHelpText fontSize="sm" color="gray.500" mb={0} fontWeight="500">
+                                        {helpText}
+                                    </StatHelpText>
+                                )}
+                            </HStack>
+                        )}
+                    </Stat>
+                </HStack>
+            </Box>
         </Box>
     );
 };
