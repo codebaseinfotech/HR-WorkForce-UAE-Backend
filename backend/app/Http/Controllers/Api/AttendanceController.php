@@ -42,7 +42,7 @@ class AttendanceController extends Controller
                 return null;
             }
 
-            return \Carbon\Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
+            return Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
         };
 
         $fmtDuration = function ($minutes) {
@@ -61,14 +61,14 @@ class AttendanceController extends Controller
 
         if ($attendance && $attendance->check_in) {
 
-            $inDT = \Carbon\Carbon::createFromFormat(
+            $inDT = Carbon::createFromFormat(
                 'Y-m-d H:i',
                 $date . ' ' . substr($attendance->check_in, 0, 5),
                 $tz
             );
 
             $outDT = $attendance->check_out
-                ? \Carbon\Carbon::createFromFormat(
+                ? Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
@@ -79,12 +79,12 @@ class AttendanceController extends Controller
 
             // Break
             if ($attendance->break_in && $attendance->break_out) {
-                $bInDT = \Carbon\Carbon::createFromFormat(
+                $bInDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $date . ' ' . substr($attendance->break_in, 0, 5),
                     $tz
                 );
-                $bOutDT = \Carbon\Carbon::createFromFormat(
+                $bOutDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $date . ' ' . substr($attendance->break_out, 0, 5),
                     $tz
@@ -99,12 +99,12 @@ class AttendanceController extends Controller
 
             // Session overtime (overtime_in/out)
             if ($attendance->overtime_in && $attendance->overtime_out) {
-                $otInDT = \Carbon\Carbon::createFromFormat(
+                $otInDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $date . ' ' . substr($attendance->overtime_in, 0, 5),
                     $tz
                 );
-                $otOutDT = \Carbon\Carbon::createFromFormat(
+                $otOutDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $date . ' ' . substr($attendance->overtime_out, 0, 5),
                     $tz
@@ -150,14 +150,14 @@ class AttendanceController extends Controller
 
                 if ($a->check_in && $a->check_out) {
 
-                    $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_in, 0, 5));
-                    $outDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_out, 0, 5));
+                    $inDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_in, 0, 5));
+                    $outDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_out, 0, 5));
 
                     $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
 
                     if ($a->break_in && $a->break_out) {
-                        $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_in, 0, 5));
-                        $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_out, 0, 5));
+                        $bInDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_in, 0, 5));
+                        $bOutDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_out, 0, 5));
                         $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
                     }
 
@@ -190,8 +190,8 @@ class AttendanceController extends Controller
             'date' => 'required|date',
             'action' => 'nullable|string|in:check_in,check_out,break_in,break_out,overtime_in,overtime_out',
             'time' => 'nullable|date_format:H:i',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -267,11 +267,11 @@ class AttendanceController extends Controller
         $shiftEnd = $workSchedule->end_time ?? '18:00:00';
         $breakDefaultMinutes = (int) ($workSchedule->break_minutes ?? 60);
 
-        $shiftStartHM = \Carbon\Carbon::parse($shiftStart)->format('H:i');
-        $shiftEndHM = \Carbon\Carbon::parse($shiftEnd)->format('H:i');
+        $shiftStartHM = Carbon::parse($shiftStart)->format('H:i');
+        $shiftEndHM = Carbon::parse($shiftEnd)->format('H:i');
 
-        $shiftStartDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftStartHM, $tz);
-        $shiftEndDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftEndHM, $tz);
+        $shiftStartDT = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftStartHM, $tz);
+        $shiftEndDT = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $shiftEndHM, $tz);
 
         $shiftTotalMinutes = max($shiftStartDT->diffInMinutes($shiftEndDT, false), 0);
         $shiftWorkMinutes = max($shiftTotalMinutes - $breakDefaultMinutes, 0);
@@ -303,6 +303,8 @@ class AttendanceController extends Controller
                         ], 400);
                     }
                     $attendance->check_in = $time;
+                    $attendance->check_in_latitude = $request->latitude;
+                    $attendance->check_in_longitude = $request->longitude;
                     break;
 
                 case 'check_out':
@@ -318,7 +320,6 @@ class AttendanceController extends Controller
                             'message' => 'You have already checked out for this day.',
                         ], 400);
                     }
-                    // if overtime running, first close overtime
                     if ($attendance->overtime_in && !$attendance->overtime_out) {
                         return response()->json([
                             'success' => false,
@@ -326,11 +327,12 @@ class AttendanceController extends Controller
                         ], 400);
                     }
                     $attendance->check_out = $time;
+                    $attendance->check_out_latitude = $request->latitude;
+                    $attendance->check_out_longitude = $request->longitude;
                     break;
 
                 case 'break_in':
                 case 'break_out':
-                    // ❌ No break allowed during overtime session
                     if ($attendance->overtime_in && !$attendance->overtime_out) {
                         return response()->json([
                             'success' => false,
@@ -359,6 +361,8 @@ class AttendanceController extends Controller
                             ], 400);
                         }
                         $attendance->break_in = $time;
+                        $attendance->break_in_latitude = $request->latitude;
+                        $attendance->break_in_longitude = $request->longitude;
                     } else {
                         if (!$attendance->break_in) {
                             return response()->json([
@@ -373,11 +377,12 @@ class AttendanceController extends Controller
                             ], 400);
                         }
                         $attendance->break_out = $time;
+                        $attendance->break_out_latitude = $request->latitude;
+                        $attendance->break_out_longitude = $request->longitude;
                     }
                     break;
 
                 case 'overtime_in':
-                    // must have check_in at least
                     if (!$attendance->check_in) {
                         return response()->json([
                             'success' => false,
@@ -392,8 +397,7 @@ class AttendanceController extends Controller
                         ], 400);
                     }
 
-                    // only after shift end OR after check_out
-                    $reqNowDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $attendance->date . ' ' . $time, $tz);
+                    $reqNowDT = Carbon::createFromFormat('Y-m-d H:i', $attendance->date . ' ' . $time, $tz);
                     if (!$attendance->check_out && $reqNowDT->lessThan($shiftEndDT)) {
                         return response()->json([
                             'success' => false,
@@ -401,9 +405,10 @@ class AttendanceController extends Controller
                         ], 400);
                     }
 
-                    // start overtime session
                     $attendance->overtime_in = $time;
-                    $attendance->overtime_out = null; // reset if any old value
+                    $attendance->overtime_out = null;
+                    $attendance->overtime_in_latitude = $request->latitude;
+                    $attendance->overtime_in_longitude = $request->longitude;
                     break;
 
                 case 'overtime_out':
@@ -421,6 +426,8 @@ class AttendanceController extends Controller
                     }
 
                     $attendance->overtime_out = $time;
+                    $attendance->overtime_out_latitude = $request->latitude;
+                    $attendance->overtime_out_longitude = $request->longitude;
                     break;
             }
 
@@ -433,13 +440,13 @@ class AttendanceController extends Controller
             // calculate shift total only if both present
             if ($attendance->check_in && $attendance->check_out) {
 
-                $inDT = \Carbon\Carbon::createFromFormat(
+                $inDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $attendance->date . ' ' . substr($attendance->check_in, 0, 5),
                     $tz
                 );
 
-                $outDT = \Carbon\Carbon::createFromFormat(
+                $outDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $attendance->date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
@@ -449,12 +456,12 @@ class AttendanceController extends Controller
 
                 $breakMinutesCalc = 0;
                 if ($attendance->break_in && $attendance->break_out) {
-                    $bInDT = \Carbon\Carbon::createFromFormat(
+                    $bInDT = Carbon::createFromFormat(
                         'Y-m-d H:i',
                         $attendance->date . ' ' . substr($attendance->break_in, 0, 5),
                         $tz
                     );
-                    $bOutDT = \Carbon\Carbon::createFromFormat(
+                    $bOutDT = Carbon::createFromFormat(
                         'Y-m-d H:i',
                         $attendance->date . ' ' . substr($attendance->break_out, 0, 5),
                         $tz
@@ -470,7 +477,7 @@ class AttendanceController extends Controller
             // shift overtime (checkout after shift end)
             $shiftOvertime = 0;
             if ($attendance->check_out) {
-                $outDT = \Carbon\Carbon::createFromFormat(
+                $outDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $attendance->date . ' ' . substr($attendance->check_out, 0, 5),
                     $tz
@@ -484,12 +491,12 @@ class AttendanceController extends Controller
             // session overtime (overtime_in/out)
             $sessionOvertime = 0;
             if ($attendance->overtime_in && $attendance->overtime_out) {
-                $otInDT = \Carbon\Carbon::createFromFormat(
+                $otInDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $attendance->date . ' ' . substr($attendance->overtime_in, 0, 5),
                     $tz
                 );
-                $otOutDT = \Carbon\Carbon::createFromFormat(
+                $otOutDT = Carbon::createFromFormat(
                     'Y-m-d H:i',
                     $attendance->date . ' ' . substr($attendance->overtime_out, 0, 5),
                     $tz
@@ -531,7 +538,7 @@ class AttendanceController extends Controller
                 return null;
             }
 
-            return \Carbon\Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
+            return Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
         };
 
         $fmtDuration = function ($minutes) {
@@ -555,16 +562,16 @@ class AttendanceController extends Controller
         $workMinutes = 0;
 
         if ($today && $today->check_in) {
-            $inDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_in, 0, 5), $tz);
+            $inDT = Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_in, 0, 5), $tz);
             $outDT = $today->check_out
-                ? \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_out, 0, 5), $tz)
+                ? Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->check_out, 0, 5), $tz)
                 : now()->setTimezone($tz);
 
             $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
 
             if ($today->break_in && $today->break_out) {
-                $bInDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_in, 0, 5), $tz);
-                $bOutDT = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_out, 0, 5), $tz);
+                $bInDT = Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_in, 0, 5), $tz);
+                $bOutDT = Carbon::createFromFormat('Y-m-d H:i', $today->date . ' ' . substr($today->break_out, 0, 5), $tz);
                 $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
             }
 
@@ -637,6 +644,18 @@ class AttendanceController extends Controller
                 'break_out' => $attendance->break_out,
                 'overtime_in' => $attendance->overtime_in,
                 'overtime_out' => $attendance->overtime_out,
+                'check_in_latitude' => $attendance->check_in_latitude ?? null,
+                'check_in_longitude' => $attendance->check_in_longitude ?? null,
+                'check_out_latitude' => $attendance->check_out_latitude ?? null,
+                'check_out_longitude' => $attendance->check_out_longitude ?? null,
+                'break_in_latitude' => $attendance->break_in_latitude ?? null,
+                'break_in_longitude' => $attendance->break_in_longitude ?? null,
+                'break_out_latitude' => $attendance->break_out_latitude ?? null,
+                'break_out_longitude' => $attendance->break_out_longitude ?? null,
+                'overtime_in_latitude' => $attendance->overtime_in_latitude,
+                'overtime_in_longitude' => $attendance->overtime_in_longitude,
+                'overtime_out_latitude' => $attendance->overtime_out_latitude,
+                'overtime_out_longitude' => $attendance->overtime_out_longitude,
                 'total_minutes' => (int) ($attendance->total_minutes ?? 0),
                 'overtime_minutes' => (int) ($attendance->overtime_minutes ?? 0),
             ],
@@ -1010,5 +1029,298 @@ class AttendanceController extends Controller
             $filename,
             \Maatwebsite\Excel\Excel::XLSX
         );
+    }
+    public function dateDetail(Request $request)
+    {
+        $authUser = authUser();
+
+        if (!is_object($authUser)) {
+            return $authUser;
+        }
+
+        $tz = config('app.timezone', 'Asia/Dubai');
+        $date = $request->date ?? now()->setTimezone($tz)->format('Y-m-d');
+
+        $attendance = Attendance::where('user_id', $authUser->id)
+            ->whereDate('date', $date)
+            ->latest('id')
+            ->first();
+
+        $fmtTime = function ($t) use ($tz) {
+            if (!$t) {
+                return null;
+            }
+
+            return Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
+        };
+
+        $fmtDuration = function ($minutes) {
+            $minutes = (int) max($minutes, 0);
+            $h = intdiv($minutes, 60);
+            $m = $minutes % 60;
+
+            return sprintf('%02d Hr %02d Min', $h, $m);
+        };
+
+        $breakMinutes = 0;
+        $shiftWorkMinutes = 0;
+        $shiftOvertime = 0;
+        $sessionOvertime = 0;
+        $totalWorkedMinutes = 0;
+
+        if ($attendance && $attendance->check_in) {
+            $inDT = Carbon::createFromFormat(
+                'Y-m-d H:i',
+                $date . ' ' . substr($attendance->check_in, 0, 5),
+                $tz
+            );
+
+            $outDT = $attendance->check_out
+                ? Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date . ' ' . substr($attendance->check_out, 0, 5),
+                    $tz
+                )
+                : now()->setTimezone($tz);
+
+            $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
+
+            if ($attendance->break_in && $attendance->break_out) {
+                $bInDT = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date . ' ' . substr($attendance->break_in, 0, 5),
+                    $tz
+                );
+                $bOutDT = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date . ' ' . substr($attendance->break_out, 0, 5),
+                    $tz
+                );
+                $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
+            }
+
+            $shiftWorkMinutes = max($totalMinutes - $breakMinutes, 0);
+            $shiftOvertime = (int) ($attendance->overtime_minutes ?? 0);
+
+            if ($attendance->overtime_in && $attendance->overtime_out) {
+                $otInDT = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date . ' ' . substr($attendance->overtime_in, 0, 5),
+                    $tz
+                );
+                $otOutDT = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $date . ' ' . substr($attendance->overtime_out, 0, 5),
+                    $tz
+                );
+                $sessionOvertime = max($otInDT->diffInMinutes($otOutDT, false), 0);
+            }
+
+            $totalWorkedMinutes = $shiftWorkMinutes + $shiftOvertime + $sessionOvertime;
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Attendance date detail fetched successfully.',
+            'data' => [
+                'user' => [
+                    'id' => $authUser->id,
+                    'name' => trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? '')),
+                    'company_id' => $authUser->company_id,
+                    'company_name' => optional($authUser->company)->name,
+                    'selected_date' => $date,
+                    'selected_date_label' => Carbon::parse($date)->format('d M, Y'),
+                    'current_time' => now()->setTimezone($tz)->format('h:i A'),
+                ],
+
+                'attendance_detail' => [
+                    'id' => $attendance->id ?? null,
+                    'date' => $date,
+
+                    'check_in' => $attendance ? $fmtTime($attendance->check_in) : null,
+                    'break_in' => $attendance ? $fmtTime($attendance->break_in) : null,
+                    'break_out' => $attendance ? $fmtTime($attendance->break_out) : null,
+                    'check_out' => $attendance ? $fmtTime($attendance->check_out) : null,
+                    'overtime_in' => $attendance ? $fmtTime($attendance->overtime_in) : null,
+                    'overtime_out' => $attendance ? $fmtTime($attendance->overtime_out) : null,
+
+                    'total_hours_breaked' => $fmtDuration($breakMinutes),
+                    'total_hours_worked' => $fmtDuration($totalWorkedMinutes),
+                    'overtime_minutes' => (int) ($attendance->overtime_minutes ?? 0),
+
+                    'status_name' => $attendance && $attendance->check_in ? 'Present' : 'Not Available',
+
+                    // check-in location
+                    'check_in_latitude' => $attendance->check_in_latitude ?? null,
+                    'check_in_longitude' => $attendance->check_in_longitude ?? null,
+                    'check_in_address' => $attendance->check_in_address ?? null,
+                    'check_in_map_url' => (
+                        !empty($attendance->check_in_latitude) && !empty($attendance->check_in_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->check_in_latitude . ',' . $attendance->check_in_longitude
+                        : null,
+
+                    // break-in location
+                    'break_in_latitude' => $attendance->break_in_latitude ?? null,
+                    'break_in_longitude' => $attendance->break_in_longitude ?? null,
+                    'break_in_address' => $attendance->break_in_address ?? null,
+                    'break_in_map_url' => (
+                        !empty($attendance->break_in_latitude) && !empty($attendance->break_in_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->break_in_latitude . ',' . $attendance->break_in_longitude
+                        : null,
+
+                    // break-out location
+                    'break_out_latitude' => $attendance->break_out_latitude ?? null,
+                    'break_out_longitude' => $attendance->break_out_longitude ?? null,
+                    'break_out_address' => $attendance->break_out_address ?? null,
+                    'break_out_map_url' => (
+                        !empty($attendance->break_out_latitude) && !empty($attendance->break_out_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->break_out_latitude . ',' . $attendance->break_out_longitude
+                        : null,
+
+                    // check-out location
+                    'check_out_latitude' => $attendance->check_out_latitude ?? null,
+                    'check_out_longitude' => $attendance->check_out_longitude ?? null,
+                    'check_out_address' => $attendance->check_out_address ?? null,
+                    'check_out_map_url' => (
+                        !empty($attendance->check_out_latitude) && !empty($attendance->check_out_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->check_out_latitude . ',' . $attendance->check_out_longitude
+                        : null,
+
+                    // overtime location
+                    'overtime_in_latitude' => $attendance->overtime_in_latitude ?? null,
+                    'overtime_in_longitude' => $attendance->overtime_in_longitude ?? null,
+                    'overtime_in_address' => $attendance->overtime_in_address ?? null,
+                    'overtime_in_map_url' => (
+                        !empty($attendance->overtime_in_latitude) && !empty($attendance->overtime_in_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->overtime_in_latitude . ',' . $attendance->overtime_in_longitude
+                        : null,
+
+                    'overtime_out_latitude' => $attendance->overtime_out_latitude ?? null,
+                    'overtime_out_longitude' => $attendance->overtime_out_longitude ?? null,
+                    'overtime_out_address' => $attendance->overtime_out_address ?? null,
+                    'overtime_out_map_url' => (
+                        !empty($attendance->overtime_out_latitude) && !empty($attendance->overtime_out_longitude)
+                    )
+                        ? 'https://www.google.com/maps?q=' . $attendance->overtime_out_latitude . ',' . $attendance->overtime_out_longitude
+                        : null,
+                ],
+            ],
+        ]);
+    }
+    public function attendanceHistory(Request $request)
+    {
+        $authUser = authUser();
+
+        if (!is_object($authUser)) {
+            return $authUser;
+        }
+
+        $tz = config('app.timezone', 'Asia/Dubai');
+        $today = now()->setTimezone($tz)->startOfDay();
+
+        $attendances = Attendance::where('user_id', $authUser->id)
+            ->when($request->filled('from_date'), function ($q) use ($request) {
+                $q->whereDate('date', '>=', $request->from_date);
+            })
+            ->when($request->filled('to_date'), function ($q) use ($request) {
+                $q->whereDate('date', '<=', $request->to_date);
+            })
+            ->orderBy('date', 'desc')
+            ->get();
+
+        $fmtTime = function ($t) use ($tz) {
+            if (!$t) {
+                return null;
+            }
+
+            return Carbon::createFromFormat(strlen($t) > 5 ? 'H:i:s' : 'H:i', $t, $tz)->format('h:i A');
+        };
+
+        $fmtDuration = function ($minutes) {
+            $minutes = (int) max($minutes, 0);
+            $h = intdiv($minutes, 60);
+            $m = $minutes % 60;
+
+            return sprintf('%02d Hr %02d Min', $h, $m);
+        };
+
+        $history = $attendances->map(function ($a) use ($fmtTime, $fmtDuration, $tz, $today) {
+            $breakMinutes = 0;
+            $workMinutes = 0;
+
+            $dateObj = Carbon::parse($a->date, $tz)->startOfDay();
+            $diffDays = $today->diffInDays($dateObj, false);
+
+            if ($a->check_in && $a->check_out) {
+                $inDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_in, 0, 5), $tz);
+                $outDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->check_out, 0, 5), $tz);
+
+                $totalMinutes = max($inDT->diffInMinutes($outDT, false), 0);
+
+                if ($a->break_in && $a->break_out) {
+                    $bInDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_in, 0, 5), $tz);
+                    $bOutDT = Carbon::createFromFormat('Y-m-d H:i', $a->date . ' ' . substr($a->break_out, 0, 5), $tz);
+                    $breakMinutes = max($bInDT->diffInMinutes($bOutDT, false), 0);
+                }
+
+                $workMinutes = max($totalMinutes - $breakMinutes, 0);
+            }
+
+            // Status logic
+            if ($a->check_in) {
+                $status_name = 'Present';
+            } else {
+                $status_name = 'Not Available';
+            }
+
+            // Date label logic
+            if ($diffDays === 0) {
+                $date_label = 'Today';
+            } elseif ($diffDays === 1) {
+                $date_label = 'Tomorrow';
+            } elseif ($diffDays === -1) {
+                $date_label = 'Yesterday';
+            } elseif ($diffDays > 1 && $diffDays < 7) {
+                $date_label = $diffDays . ' days';
+            } elseif ($diffDays < -1 && $diffDays > -7) {
+                $date_label = abs($diffDays) . ' days';
+            } elseif ($diffDays >= 7 && $diffDays < 30) {
+                $weeks = floor($diffDays / 7);
+                $date_label = $weeks . ' week' . ($weeks > 1 ? 's' : '');
+            } elseif ($diffDays <= -7 && $diffDays > -30) {
+                $weeks = floor(abs($diffDays) / 7);
+                $date_label = $weeks . ' week' . ($weeks > 1 ? 's' : '');
+            } else {
+                $months = max(1, floor(abs($diffDays) / 30));
+                $date_label = $months . ' month' . ($months > 1 ? 's' : '');
+            }
+
+            return [
+                'id' => $a->id,
+                'date' => $a->date,
+                'date_label' => $date_label,
+                'status_name' => $status_name,
+                'check_in' => $fmtTime($a->check_in),
+                'break_in' => $fmtTime($a->break_in),
+                'break_out' => $fmtTime($a->break_out),
+                'check_out' => $fmtTime($a->check_out),
+                'overtime_in' => $fmtTime($a->overtime_in),
+                'overtime_out' => $fmtTime($a->overtime_out),
+                'location' => $a->company_id ? optional($a->company)->name : null,
+                'total_hours_worked' => $fmtDuration($workMinutes + (int) ($a->overtime_minutes ?? 0)),
+                'overtime_minutes' => (int) ($a->overtime_minutes ?? 0),
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Attendance history fetched successfully.',
+            'data' => $history,
+        ]);
     }
 }

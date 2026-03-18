@@ -23,7 +23,7 @@ class CompanyController extends Controller
                 ->where('id', $id)
                 ->first();
 
-            if (! $company) {
+            if (!$company) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Company not found',
@@ -37,7 +37,9 @@ class CompanyController extends Controller
         }
 
         // If ID not provided → return all active companies
-        $companies = Company::where('status', 1)->get();
+        $companies = Company::where('status', 1)->with(['users' => function ($q) {
+            $q->select('id', 'company_id', 'first_name', 'last_name', 'phone','gender','signature_image','p_image','nationality_id','bod')->where('is_company_owner', 1);
+        }])->get();
 
         return response()->json([
             'status' => true,
@@ -47,6 +49,7 @@ class CompanyController extends Controller
 
     public function save(Request $request)
     {
+        
         $validator = Validator::make($request->all(), [
             'id' => 'nullable|exists:companies,id',
             'name' => 'required|string|max:255',
@@ -54,7 +57,7 @@ class CompanyController extends Controller
             'last_name' => 'required|string',
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
-            'bod' => 'nullable|date|before_or_equal:'.now()->subYears(18)->format('Y-m-d'),
+            'bod' => 'nullable|date|before_or_equal:' . now()->subYears(18)->format('Y-m-d'),
             'gender' => 'nullable|in:male,female,other',
             'p_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'signature_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -76,8 +79,7 @@ class CompanyController extends Controller
             if ($request->id) {
 
                 $company = Company::find($request->id);
-
-                if (! $company) {
+                if (!$company) {
                     return response()->json([
                         'status' => false,
                         'message' => 'Company not found',
@@ -90,7 +92,11 @@ class CompanyController extends Controller
                     $logofileImagePath = $request->file('logo')
                         ->store('company/logo', 'public');
                 }
-
+                $companyLicenseImagePath = null;
+                if ($request->hasFile('company_license_image')) {
+                    $companyLicenseImagePath = $request->file('company_license_image')
+                        ->store('users/company_license', 'public');
+                }
                 // Update Company (EMAIL REMOVE)
                 $company->update([
                     'name' => $request->name,
@@ -104,8 +110,11 @@ class CompanyController extends Controller
                     'city' => $request->city,
                     'logo' => $logofileImagePath,
                     'ip' => $request->ip(),
+                    'company_license' => $request->company_license ?? '',
+                    'company_start_date' => $company->company_start_date,
+                    'company_license_image' => $companyLicenseImagePath,
                 ]);
-
+ 
                 //  Update Related Owner User (EMAIL NOT UPDATED)
                 $user = User::where('company_id', $company->id)
                     ->where('is_company_owner', 1)
@@ -204,7 +213,11 @@ class CompanyController extends Controller
             if ($request->hasFile('logo')) {
                 $logofileImagePath = $request->file('logo')->store('users/logo', 'public');
             }
-
+            $companyLicenseImagePath = null;
+            if ($request->hasFile('company_license_image')) {
+                $companyLicenseImagePath = $request->file('company_license_image')
+                    ->store('users/company_license', 'public');
+            }
             // Create Company
             $company = Company::create([
                 'name' => $request->name,
@@ -218,6 +231,9 @@ class CompanyController extends Controller
                 'city' => $request->city,
                 'logo' => $logofileImagePath,
                 'ip' => $request->ip(),
+                'company_license' => $request->company_license ?? '',
+                'company_start_date' => $request->company_start_date?->format('Y-m-d'),
+                'company_license_image' => $companyLicenseImagePath,
             ]);
 
             // CREATE ROLE IF NOT EXISTS
@@ -285,7 +301,7 @@ class CompanyController extends Controller
     {
         $company = Company::find($id);
 
-        if (! $company) {
+        if (!$company) {
             return response()->json([
                 'status' => false,
                 'message' => 'Company not found',

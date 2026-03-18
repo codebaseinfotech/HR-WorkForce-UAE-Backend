@@ -22,6 +22,18 @@ class Attendance extends Model
         'overtime_out',
         'overtime_in',
         'overtimes_user_id', // optional if you use it
+        'check_in_latitude',    
+        'check_in_longitude',
+        'check_out_latitude',
+        'check_out_longitude',
+        'break_in_latitude',
+        'break_in_longitude',
+        'break_out_latitude',
+        'break_out_longitude',
+        'overtime_in_latitude',
+        'overtime_in_longitude',
+        'overtime_out_latitude',
+        'overtime_out_longitude'
     ];
 
     public function overtime()

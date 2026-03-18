@@ -26,4 +26,16 @@ class ThreadRead extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function toArray()
+    {
+        $array = parent::toArray();
+
+        foreach ($array as $key => $value) {
+            if (is_null($value)) {
+                $array[$key] = '-';
+            }
+        }
+
+        return $array;
+    }
 }
