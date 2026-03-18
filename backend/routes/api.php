@@ -52,54 +52,19 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('profile', [AuthController::class, 'profile']);
     Route::get('dashboard/summary', [AuthController::class, 'summary']);
-
-    Route::get(
-        'roles/{id?}',
-        [RoleController::class, 'index']
-    );
-
-    Route::post(
-        'roles',
-        [RoleController::class, 'store']
-    );
-
-    Route::put(
-        'roles/update/{role}',
-        [RoleController::class, 'update']
-    );
-
-    Route::delete(
-        'roles/delete/{role}',
-        [RoleController::class, 'destroy']
-    );
+    Route::get('roles/{id?}',[RoleController::class, 'index']);
+    Route::post('roles',[RoleController::class, 'store']);
+    Route::put('roles/update/{role}',[RoleController::class, 'update']);
+    Route::delete('roles/delete/{role}',[RoleController::class, 'destroy']);
 
     // PERMISSION ROUTES
-
-    Route::get(
-        'permissions/{id?}',
-        [PermissionController::class, 'index']
-    );
-
-    Route::post(
-        'permissions',
-        [PermissionController::class, 'store']
-    );
-
-    Route::put(
-        'permissions/update/{permission}',
-        [PermissionController::class, 'update']
-    );
-
-    Route::delete(
-        'permissions/delete/{permission}',
-        [PermissionController::class, 'destroy']
-    );
+    Route::get('permissions/{id?}',[PermissionController::class, 'index']);
+    Route::post('permissions',[PermissionController::class, 'store']);
+    Route::put('permissions/update/{permission}',[PermissionController::class, 'update']);
+    Route::delete('permissions/delete/{permission}',[PermissionController::class, 'destroy']);
     // ASSIGN ROLE PERMISSION
 
-    Route::post(
-        'roles/{role}/permissions',
-        [RolePermissionController::class, 'updatePermissions']
-    );
+    Route::post('roles/{role}/permissions',[RolePermissionController::class, 'updatePermissions']);
 
     Route::post('company/save', [CompanyController::class, 'save']);
     Route::get('company/list/{id?}', [CompanyController::class, 'index']);
