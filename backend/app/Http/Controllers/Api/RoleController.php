@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
-    public function index($id = null)
+    public function index(Request $request , $id = null)
     {
         $query = Role::companyWise()
             ->with('permissions')
@@ -18,6 +18,18 @@ class RoleController extends Controller
         // If ID provided → return single role
         if ($id) {
             $role = $query->find($id);
+
+            if (! $role) {
+                return response()->json([
+                    'message' => 'Role not found',
+                ], 404);
+            }
+
+            return response()->json($role);
+        }
+        $company_id = $request->company_id;
+        if ($company_id) {
+            $role = $query->where('company_id',$company_id);
 
             if (! $role) {
                 return response()->json([

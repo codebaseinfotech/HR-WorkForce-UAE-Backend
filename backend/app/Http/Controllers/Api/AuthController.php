@@ -48,7 +48,6 @@ class AuthController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-
         $autoPassword = '123456' ?? Str::random(8); // example: A8f#kP2Q
 
         $profileImagePath = null;
@@ -118,7 +117,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Signup successful',
+            'message' => 'Add successful',
             // 'token' => $token,
             'password' => $autoPassword,
             'user' => $user,
