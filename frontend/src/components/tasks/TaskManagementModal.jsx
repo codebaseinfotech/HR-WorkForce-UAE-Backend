@@ -124,7 +124,7 @@ const TaskManagementModal = ({ isOpen, onClose, staffMember }) => {
         onClose();
     };
 
-    const tasks = tasksData?.tasks || [];
+    const tasks = tasksData?.data?.data || tasksData?.data || tasksData?.tasks || [];
     const comments = commentsData?.comments || [];
     const documents = documentsData?.documents || [];
     const chatMessages = chatData?.messages || [];
@@ -421,9 +421,9 @@ const TaskManagementModal = ({ isOpen, onClose, staffMember }) => {
                                                 <Text fontSize="sm" fontWeight="semibold" noOfLines={2}>
                                                     {task.title}
                                                 </Text>
-                                                {task.dueDate && (
+                                                {(task.due_date || task.dueDate) && (
                                                     <Text fontSize="xs" color="gray.500">
-                                                        Due: {new Date(task.dueDate).toLocaleDateString()}
+                                                        Due: {new Date(task.due_date || task.dueDate).toLocaleDateString()}
                                                     </Text>
                                                 )}
                                             </VStack>
@@ -457,17 +457,17 @@ const TaskManagementModal = ({ isOpen, onClose, staffMember }) => {
                                                     <Badge colorScheme={getPriorityColor(selectedTask.priority)}>
                                                         {selectedTask.priority} priority
                                                     </Badge>
-                                                    {selectedTask.dueDate && (
+                                                    {(selectedTask.due_date || selectedTask.dueDate) && (
                                                         <HStack spacing={1} fontSize="sm" color="gray.600">
                                                             <Icon as={FiCalendar} boxSize={4} />
                                                             <Text>
-                                                                {new Date(selectedTask.dueDate).toLocaleDateString()}
+                                                                {new Date(selectedTask.due_date || selectedTask.dueDate).toLocaleDateString()}
                                                             </Text>
                                                         </HStack>
                                                     )}
                                                     <HStack spacing={1} fontSize="sm" color="gray.600">
                                                         <Icon as={FiUser} boxSize={4} />
-                                                        <Text>By: {selectedTask.assignedByName}</Text>
+                                                        <Text>By: {selectedTask.assignments?.[0]?.user?.first_name || selectedTask.assignments?.[0]?.user?.firstName || selectedTask.assignedByName || 'Admin'}</Text>
                                                     </HStack>
                                                 </HStack>
                                             </Box>

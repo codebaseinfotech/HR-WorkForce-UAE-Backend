@@ -132,12 +132,12 @@ const CompanyAttendance = () => {
                             <Table variant="simple" size="md" w="100%" style={{ minWidth: '1000px' }}>
                                 <Thead>
                                     <Tr>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Staff Member</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Check In</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Check Out</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Break Time</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Overtime</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap" pr={6}>Total Worked</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Staff Member</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Check In</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Check Out</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Break Time</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Overtime</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap" pr={6}>Total Worked</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>

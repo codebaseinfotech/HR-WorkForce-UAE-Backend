@@ -111,7 +111,7 @@ const CreateManager = () => {
                         <VStack align="stretch" spacing={8}>
                             {/* Personal Information */}
                             <Box>
-                                <Text fontSize="lg" fontWeight="semibold" mb={4} color="gray.800">
+                                <Text fontSize="lg" fontWeight="700" mb={4} color="gray.800" letterSpacing="-0.01em">
                                     Personal Information
                                 </Text>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
@@ -216,7 +216,7 @@ const CreateManager = () => {
 
                             {/* Account Information */}
                             <Box>
-                                <Text fontSize="lg" fontWeight="semibold" mb={4} color="gray.800">
+                                <Text fontSize="lg" fontWeight="700" mb={4} color="gray.800" letterSpacing="-0.01em">
                                     Account Information
                                 </Text>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
@@ -260,7 +260,7 @@ const CreateManager = () => {
 
                             {/* Job Information */}
                             <Box>
-                                <Text fontSize="lg" fontWeight="semibold" mb={4} color="gray.800">
+                                <Text fontSize="lg" fontWeight="700" mb={4} color="gray.800" letterSpacing="-0.01em">
                                     Job Information
                                 </Text>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>

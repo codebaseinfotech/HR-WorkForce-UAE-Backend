@@ -2,20 +2,34 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
+const baseQuery = fetchBaseQuery({
+    baseUrl,
+    prepareHeaders: (headers) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+        // Add platform header for all requests
+        headers.set('platform', 'web');
+        return headers;
+    },
+});
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+    let result = await baseQuery(args, api, extraOptions);
+    const url = typeof args === 'string' ? args : args.url;
+    
+    // If we get a 401 Unauthorized and it's not the login endpoint
+    if (result.error && result.error.status === 401 && url !== '/api/sign-in') {
+        window.dispatchEvent(new Event('auth:unauthorized'));
+    }
+    
+    return result;
+};
+
 export const apiSlice = createApi({
     reducerPath: 'api',
-    baseQuery: fetchBaseQuery({
-        baseUrl,
-        prepareHeaders: (headers) => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                headers.set('Authorization', `Bearer ${token}`);
-            }
-            // Add platform header for all requests
-            headers.set('platform', 'web');
-            return headers;
-        },
-    }),
+    baseQuery: baseQueryWithReauth,
     tagTypes: ['User', 'Staff', 'Company', 'CompanyRequest', 'Manager', 'Stats', 'Task', 'TaskComment', 'TaskDocument', 'TaskChat', 'LeaveType', 'LeavePolicy', 'WorkSchedule', 'Attendance'],
     endpoints: (builder) => ({
         // Auth endpoints
@@ -273,10 +287,10 @@ export const apiSlice = createApi({
         getTasks: builder.query({
             query: ({ companyId, staffId, status }) => {
                 const params = new URLSearchParams();
-                if (companyId) params.append('companyId', companyId);
-                if (staffId) params.append('staffId', staffId);
+                if (companyId) params.append('company_id', companyId);
+                if (staffId) params.append('user_id', staffId);
                 if (status) params.append('status', status);
-                return `/tasks/list?${params.toString()}`;
+                return `/api/v1/tasks-admin?${params.toString()}`;
             },
             providesTags: ['Task'],
         }),
@@ -501,6 +515,14 @@ export const apiSlice = createApi({
         }),
 
         // Stats endpoints
+        getDashboardSummary: builder.query({
+            query: (companyId) => {
+                const p = new URLSearchParams();
+                if (companyId) p.append('company_id', companyId);
+                return `/api/v1/dashboard/summary?${p.toString()}`;
+            },
+            providesTags: ['Stats'],
+        }),
         getSuperAdminOverview: builder.query({
             query: () => '/stats/superadmin/overview',
             providesTags: ['Stats'],
@@ -583,6 +605,7 @@ export const {
     useCreateAndApproveCompanyMutation,
 
     // Stats
+    useGetDashboardSummaryQuery,
     useGetSuperAdminOverviewQuery,
     useGetCompanyDashboardQuery,
     useGetDashboardStatsQuery,

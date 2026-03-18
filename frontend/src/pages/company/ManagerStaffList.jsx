@@ -282,6 +282,9 @@ const ManagerStaffList = () => {
                         bg="gray.800"
                         color="white"
                         fontSize="xs"
+                        fontWeight="700"
+                        letterSpacing="wider"
+                        textTransform="uppercase"
                         py={4}
                         borderBottom="none"
                         textAlign={i >= arr.length - 2 ? "center" : "left"}

@@ -20,6 +20,7 @@ import {
     AlertIcon,
     AlertDescription,
     Image,
+    Flex,
 } from '@chakra-ui/react';
 import { FiMail, FiUser, FiPhone, FiCalendar, FiMapPin, FiBriefcase } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -183,28 +184,38 @@ const CreateUser = () => {
     return (
         <DashboardLayout>
             <VStack align="stretch" spacing={6}>
-                {/* Header */}
-                <HStack justify="space-between" flexWrap="wrap" gap={4}>
-                    <Box>
-                        <Heading
-                            size="xl"
-                            mb={2}
-                            bgGradient="linear(to-r, primary.600, purple.600)"
-                            bgClip="text"
+                {/* ── Hero Header ── */}
+                <Box
+                    bgGradient="linear(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)"
+                    borderRadius="2xl" p={{ base: 6, md: 8 }} position="relative" overflow="hidden"
+                >
+                    <Box position="absolute" top="-50px" right="-50px" w="200px" h="200px" borderRadius="full" bg="whiteAlpha.50" />
+                    <Box position="absolute" bottom="-30px" left="20%" w="140px" h="140px" borderRadius="full" bg="whiteAlpha.30" />
+
+                    <Flex justify="space-between" align="flex-end" flexWrap="wrap" gap={4} position="relative">
+                        <Box>
+                            <Text fontSize="xs" color="whiteAlpha.500" fontWeight="600" letterSpacing="wider" textTransform="uppercase" mb={1}>
+                                Super Admin Panel
+                            </Text>
+                            <Heading size="xl" color="white" letterSpacing="-0.02em" mb={1}>
+                                Create Company
+                            </Heading>
+                            <Text color="whiteAlpha.700" fontSize="sm">
+                                Register a new company with owner details
+                            </Text>
+                        </Box>
+                        
+                        <Button
+                            variant="outline"
+                            color="white"
+                            borderColor="whiteAlpha.400"
+                            _hover={{ bg: 'whiteAlpha.200' }}
+                            onClick={() => navigate('/superadmin/company-requests')}
                         >
-                            Create Company
-                        </Heading>
-                        <Text color="gray.600" fontSize="lg">
-                            Register a new company with owner details
-                        </Text>
-                    </Box>
-                    <Button
-                        variant="outline"
-                        onClick={() => navigate('/superadmin/company-requests')}
-                    >
-                        View All Requests
-                    </Button>
-                </HStack>
+                            View All Requests
+                        </Button>
+                    </Flex>
+                </Box>
 
                 {/* Success Alert */}
                 {createdCredentials && (
@@ -236,10 +247,10 @@ const CreateUser = () => {
 
                             {/* Company Information */}
                             <Box w="full">
-                                <Text fontSize="lg" fontWeight="semibold" mb={4} color="gray.800">
+                                <Text fontSize="lg" fontWeight="700" mb={4} color="gray.800" letterSpacing="-0.01em">
                                     Company Information
                                 </Text>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={4}>
                                     <FormControl isRequired>
                                         <FormLabel fontWeight="medium">Company Name</FormLabel>
                                         <InputGroup>
@@ -328,10 +339,10 @@ const CreateUser = () => {
 
                             {/* Owner / Personal Information */}
                             <Box w="full">
-                                <Text fontSize="lg" fontWeight="semibold" mb={4} color="gray.800">
+                                <Text fontSize="lg" fontWeight="700" mb={4} color="gray.800" letterSpacing="-0.01em">
                                     Owner Information
                                 </Text>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={4}>
                                     <FormControl isRequired>
                                         <FormLabel fontWeight="medium">First Name</FormLabel>
                                         <InputGroup>

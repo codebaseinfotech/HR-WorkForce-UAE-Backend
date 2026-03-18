@@ -25,9 +25,9 @@ import {
     MenuList,
     MenuItem,
     MenuDivider,
-    useDisclosure,
     Flex,
     Tooltip,
+    Select,
 } from '@chakra-ui/react';
 import {
     FiEdit,
@@ -48,8 +48,6 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/common/Card';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
-import AssignTaskModal from '../../components/tasks/AssignTaskModal';
-import TaskManagementModal from '../../components/tasks/TaskManagementModal';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     useGetUserFetchQuery,
@@ -57,30 +55,48 @@ import {
     useUpdateCreatedByMutation,
 } from '../../store/apiSlice';
 
-// ── Assign Manager Submenu ─────────────────────────────────────────────────
-const AssignManagerMenu = ({ staffId, companyId }) => {
+// ── Assign Manager Dropdown ─────────────────────────────────────────────────
+const AssignManagerDropdown = ({ staffId, companyId, currentManagerId }) => {
     const toast = useToast();
     const [updateCreatedBy, { isLoading }] = useUpdateCreatedByMutation();
 
-    const { data: mData } = useGetManagersForAssign(
+    // Default to existing manager if available, else empty string
+    const [selectedManager, setSelectedManager] = useState(currentManagerId || "");
+
+    const { data: mData, isLoading: isManagersLoading } = useGetManagersForAssign(
         { company_id: companyId, role: 'manager' },
         { skip: !companyId }
     );
     const raw = mData?.data || mData?.users || mData || [];
     const managers = Array.isArray(raw) ? raw : [];
 
-    const handleAssign = async (manager) => {
+    const handleAssign = async () => {
+        if (!selectedManager) {
+            toast({
+                title: 'Please select a manager',
+                status: 'warning',
+                duration: 2000,
+                position: 'top-right'
+            });
+            return;
+        }
+
         try {
             await updateCreatedBy({
                 user_id: staffId,
-                created_by_user: manager.id,
+                created_by_user: selectedManager,
             }).unwrap();
+
+            const manager = managers.find(m => m.id == selectedManager);
+            const managerName = manager ? `${manager.first_name || manager.firstName || ''} ${manager.last_name || manager.lastName || ''}`.trim() : 'Manager';
+
             toast({
                 title: '✓ Manager Assigned',
-                description: `Staff assigned to ${manager.first_name || manager.firstName} ${manager.last_name || manager.lastName}`,
+                description: `Staff assigned to ${managerName}`,
                 status: 'success',
                 duration: 3000,
                 isClosable: true,
+                position: 'top-right',
             });
         } catch (err) {
             toast({
@@ -89,32 +105,54 @@ const AssignManagerMenu = ({ staffId, companyId }) => {
                 status: 'error',
                 duration: 4000,
                 isClosable: true,
+                position: 'top-right',
             });
         }
     };
 
-    if (managers.length === 0) {
-        return (
-            <MenuItem icon={<FiUserCheck />} isDisabled>
-                No managers available
-            </MenuItem>
-        );
-    }
-
-    return managers.map(m => {
-        const name = `${m.first_name || m.firstName || ''} ${m.last_name || m.lastName || ''}`.trim();
-        return (
-            <MenuItem
-                key={m.id}
-                icon={<FiUserCheck />}
-                onClick={() => handleAssign(m)}
-                isDisabled={isLoading}
-                fontSize="sm"
+    return (
+        <HStack spacing={2}>
+            <Select
+                size="sm"
+                borderRadius="lg"
+                value={selectedManager}
+                onChange={(e) => setSelectedManager(e.target.value)}
+                placeholder="Select Manager"
+                w="160px"
+                bg="white"
+                isDisabled={isManagersLoading}
+                borderColor="gray.200"
+                _hover={{ borderColor: 'gray.300' }}
+                _focus={{ borderColor: 'purple.400', boxShadow: '0 0 0 1px #9f7aea' }}
             >
-                {name}
-            </MenuItem>
-        );
-    });
+                {managers.map(m => {
+                    const name = `${m.first_name || m.firstName || ''} ${m.last_name || m.lastName || ''}`.trim();
+                    return (
+                        <option key={m.id} value={m.id}>
+                            {name}
+                        </option>
+                    );
+                })}
+            </Select>
+            <Button
+                size="sm"
+                bgGradient="linear(to-r, purple.500, blue.500)"
+                color="white"
+                onClick={handleAssign}
+                isLoading={isLoading}
+                isDisabled={!selectedManager || isManagersLoading}
+                borderRadius="lg"
+                _hover={{
+                    bgGradient: "linear(to-r, purple.600, blue.600)",
+                    transform: "translateY(-1px)",
+                    shadow: "md",
+                }}
+                transition="all 0.2s"
+            >
+                Assign
+            </Button>
+        </HStack>
+    );
 };
 
 // ── Main StaffList ─────────────────────────────────────────────────────────
@@ -127,18 +165,6 @@ const StaffList = () => {
     const companyId = user?.companyId || user?.id;
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedStaff, setSelectedStaff] = useState(null);
-
-    const {
-        isOpen: isAssignTaskOpen,
-        onOpen: onAssignTaskOpen,
-        onClose: onAssignTaskClose,
-    } = useDisclosure();
-    const {
-        isOpen: isTaskManagementOpen,
-        onOpen: onTaskManagementOpen,
-        onClose: onTaskManagementClose,
-    } = useDisclosure();
 
     // Fetch ALL staff for this company via the new user-fetch API
     const {
@@ -230,19 +256,6 @@ const StaffList = () => {
                                     _hover={{ bg: 'whiteAlpha.200' }}
                                 />
                             </Tooltip>
-                            <Button
-                                leftIcon={<FiPlus />}
-                                size="lg"
-                                bg="purple.500"
-                                color="white"
-                                _hover={{ bg: 'purple.600', transform: 'translateY(-2px)', shadow: 'md' }}
-                                _active={{ bg: 'purple.700' }}
-                                borderRadius="xl"
-                                transition="all 0.2s"
-                                onClick={() => navigate('/staff/add')}
-                            >
-                                Add Staff
-                            </Button>
                         </HStack>
                     </Flex>
                 </Box>
@@ -359,65 +372,46 @@ const StaffList = () => {
                                                         {isActive ? 'Active' : 'Inactive'}
                                                     </Badge>
                                                 </Td>
-                                                <Td>
-                                                    <Menu>
-                                                        <MenuButton
-                                                            as={IconButton}
-                                                            icon={<FiMoreVertical />}
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            borderRadius="lg"
-                                                            aria-label="Actions"
+                                                <Td pr={6}>
+                                                    <HStack justify="flex-end" spacing={2}>
+                                                        <AssignManagerDropdown
+                                                            staffId={member.id}
+                                                            companyId={companyId}
+                                                            currentManagerId={member.created_by_user || ''}
                                                         />
-                                                        <MenuList shadow="xl" borderRadius="xl" py={2}>
-                                                            {/* ── Assign Manager ── */}
-                                                            <Text
-                                                                fontSize="2xs"
-                                                                fontWeight="700"
-                                                                color="gray.400"
-                                                                px={3}
-                                                                py={1}
-                                                                letterSpacing="wider"
-                                                                textTransform="uppercase"
-                                                            >
-                                                                Assign to Manager
-                                                            </Text>
-                                                            <AssignManagerMenu
-                                                                staffId={member.id}
-                                                                companyId={companyId}
+
+                                                        <Menu placement="bottom-end">
+                                                            <MenuButton
+                                                                as={IconButton}
+                                                                icon={<FiMoreVertical />}
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                borderRadius="lg"
+                                                                aria-label="More Actions"
+                                                                _hover={{ bg: 'gray.100' }}
                                                             />
-                                                            <MenuDivider />
-                                                            {/* ── Tasks ── */}
-                                                            <MenuItem
-                                                                icon={<FiClipboard />}
-                                                                onClick={() => {
-                                                                    setSelectedStaff(member);
-                                                                    onAssignTaskOpen();
-                                                                }}
-                                                            >
-                                                                Assign Task
-                                                            </MenuItem>
-                                                            <MenuItem
-                                                                icon={<FiEye />}
-                                                                onClick={() => {
-                                                                    setSelectedStaff(member);
-                                                                    onTaskManagementOpen();
-                                                                }}
-                                                            >
-                                                                View Tasks
-                                                            </MenuItem>
-                                                            <MenuDivider />
-                                                            <MenuItem icon={<FiEdit />}>
-                                                                Edit
-                                                            </MenuItem>
-                                                            <MenuItem
-                                                                icon={<FiTrash2 />}
-                                                                color="red.500"
-                                                            >
-                                                                Delete
-                                                            </MenuItem>
-                                                        </MenuList>
-                                                    </Menu>
+                                                            <MenuList shadow="xl" borderRadius="xl" py={2} minW="160px">
+                                                                <Text
+                                                                    fontSize="xs"
+                                                                    fontWeight="800"
+                                                                    color="gray.500"
+                                                                    px={3}
+                                                                    py={2}
+                                                                    letterSpacing="wider"
+                                                                    textTransform="uppercase"
+                                                                >
+                                                                    Management
+                                                                </Text>
+                                                                <MenuDivider mt={0} />
+                                                                <MenuItem icon={<FiEdit />} fontSize="sm" onClick={() => navigate(`/staff/edit/${member.id}`)}>
+                                                                    Edit Profile
+                                                                </MenuItem>
+                                                                <MenuItem icon={<FiTrash2 />} color="red.500" fontSize="sm">
+                                                                    Delete Staff
+                                                                </MenuItem>
+                                                            </MenuList>
+                                                        </Menu>
+                                                    </HStack>
                                                 </Td>
                                             </Tr>
                                         );
@@ -429,21 +423,6 @@ const StaffList = () => {
                 )}
             </VStack>
 
-            {/* Task Modals */}
-            {selectedStaff && (
-                <>
-                    <AssignTaskModal
-                        isOpen={isAssignTaskOpen}
-                        onClose={onAssignTaskClose}
-                        staffMember={selectedStaff}
-                    />
-                    <TaskManagementModal
-                        isOpen={isTaskManagementOpen}
-                        onClose={onTaskManagementClose}
-                        staffMember={selectedStaff}
-                    />
-                </>
-            )}
         </DashboardLayout>
     );
 };

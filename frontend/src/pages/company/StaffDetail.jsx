@@ -102,9 +102,9 @@ const LeaveTypesCard = () => {
                     <Table variant="simple" size="sm" w="100%" style={{ minWidth: '800px' }}>
                             <Thead>
                                 <Tr>
-                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Code</Th>
-                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Name</Th>
-                                    <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="center">Actions</Th>
+                                    <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Code</Th>
+                                    <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Name</Th>
+                                    <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" textAlign="center">Actions</Th>
                                 </Tr>
                             </Thead>
                         <Tbody>
@@ -272,10 +272,10 @@ const LeavePoliciesCard = ({ companyId }) => {
                                     <Table size="xs" variant="simple" w="100%" style={{ minWidth: '800px' }}>
                                         <Thead>
                                             <Tr>
-                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Leave Type</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" isNumeric>Quota</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Carry Fwd</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none">Encash</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Leave Type</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" isNumeric>Quota</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Carry Fwd</Th>
+                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Encash</Th>
                                             </Tr>
                                         </Thead>
                                         <Tbody>
@@ -667,7 +667,7 @@ const AttendanceCard = () => {
                             <Thead>
                                 <Tr>
                                     {['Date', 'Day', 'Status', 'Check In', 'Check Out', 'OT', 'Total'].map((h) => (
-                                        <Th key={h} bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">{h}</Th>
+                                        <Th key={h} bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">{h}</Th>
                                     ))}
                                 </Tr>
                             </Thead>

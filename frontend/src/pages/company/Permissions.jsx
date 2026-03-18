@@ -404,14 +404,14 @@ const Permissions = () => {
                                         alignItems="center"
                                         gap={2}
                                     >
-                                        <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wider">ID</Text>
-                                        <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wider">Name</Text>
-                                        <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wider">Slug</Text>
+                                        <Text fontSize="xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="wider">ID</Text>
+                                        <Text fontSize="xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="wider">Name</Text>
+                                        <Text fontSize="xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="wider">Slug</Text>
                                         {ACTIONS.map(action => (
                                             <Text
                                                 key={action}
                                                 fontSize="xs"
-                                                fontWeight="600"
+                                                fontWeight="700"
                                                 color={ACTION_CONFIG[action].color}
                                                 textTransform="uppercase"
                                                 letterSpacing="wider"
@@ -420,7 +420,7 @@ const Permissions = () => {
                                                 {ACTION_CONFIG[action].label}
                                             </Text>
                                         ))}
-                                        <Text fontSize="xs" fontWeight="600" color="purple.500" textTransform="uppercase" letterSpacing="wider" textAlign="center">All</Text>
+                                        <Text fontSize="xs" fontWeight="700" color="purple.500" textTransform="uppercase" letterSpacing="wider" textAlign="center">All</Text>
                                     </Grid>
 
                                     {/* Permission Rows */}

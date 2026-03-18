@@ -220,12 +220,12 @@ const Roles = () => {
                             <Table variant="simple" w="100%" style={{ minWidth: '800px' }}>
                                 <Thead>
                                     <Tr>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap" w="60px">#</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Role Name</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Slug</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" isNumeric whiteSpace="nowrap">Permissions</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" whiteSpace="nowrap">Status</Th>
-                                        <Th bg="gray.800" color="white" fontSize="xs" py={4} borderBottom="none" textAlign="center" whiteSpace="nowrap">Actions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap" w="60px">#</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Role Name</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Slug</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" isNumeric whiteSpace="nowrap">Permissions</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" whiteSpace="nowrap">Status</Th>
+                                        <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" textAlign="center" whiteSpace="nowrap">Actions</Th>
                                     </Tr>
                                 </Thead>
                                 <Tbody>

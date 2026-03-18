@@ -224,7 +224,7 @@ const Attendance = () => {
                                     <Tr>
                                         {['Date', 'Day', 'Status', 'Check In', 'Check Out', 'Break', 'Overtime', 'Total Worked'].map((h) => (
                                             <Th key={h} bg="gray.800"
-                                                color="white" fontSize="xs" py={4}
+                                                color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4}
                                                 borderBottom="none" whiteSpace="nowrap">
                                                 {h}
                                             </Th>
