@@ -195,7 +195,7 @@ const Dashboard = () => {
                                         <Tr>
                                             <Th bg="gray.800" color="white" borderBottom="none" py={3}>Name</Th>
                                             <Th bg="gray.800" color="white" borderBottom="none">Contact</Th>
-                                            <Th bg="gray.800" color="white" borderBottom="none">Status</Th>
+                                            <Th bg="gray. 80 0" color="white" borderBottom="none">Status</Th>
                                         </Tr>
                                     </Thead>
                                     <Tbody>
