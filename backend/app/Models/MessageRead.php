@@ -32,4 +32,16 @@ class MessageRead extends Model
     {
         return $this->belongsTo(Thread::class, 'thread_id');
     }
+    public function toArray()
+    {
+        $array = parent::toArray();
+
+        foreach ($array as $key => $value) {
+            if (is_null($value)) {
+                $array[$key] = '-';
+            }
+        }
+
+        return $array;
+    }
 }

@@ -10,7 +10,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use HasFactory, Notifiable , SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     /* =========================
      |  STATUS CONSTANTS
@@ -61,6 +61,9 @@ class User extends Authenticatable implements JWTSubject
         'is_company_owner',
         'is_super_admin',
         'created_by_user',
+        'address',
+        'position_id',
+        'country_code'
     ];
 
     /* =========================
@@ -77,7 +80,7 @@ class User extends Authenticatable implements JWTSubject
         'signature_image',
     ];
 
-    protected $appends = ['p_image_url', 'signature_image_url','status_name'];
+    protected $appends = ['p_image_url', 'signature_image_url', 'status_name'];
 
     protected $casts = [
         'agree' => 'boolean',
@@ -96,6 +99,7 @@ class User extends Authenticatable implements JWTSubject
             'agree' => 'boolean',
             'remember_me' => 'boolean',
             'status' => 'integer',
+            'bod' => 'date:Y-m-d',
         ];
     }
 
@@ -124,7 +128,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function getFullNameAttribute()
     {
-        return trim($this->first_name.' '.$this->last_name);
+        return trim($this->first_name . ' ' . $this->last_name);
     }
 
     public function getStatusTextAttribute()
@@ -152,18 +156,25 @@ class User extends Authenticatable implements JWTSubject
 
     public function getPImageUrlAttribute()
     {
-        return $this->p_image
-            ? asset('storage/'.$this->p_image)
-            : null;
+        if (!$this->p_image) {
+            return '';
+        }
+
+        return asset('storage/' . $this->p_image);
     }
 
     public function getSignatureImageUrlAttribute()
     {
-        return $this->signature_image
-            ? asset('storage/'.$this->signature_image)
-            : null;
-    }
+        if (!$this->signature_image) {
+            return '';
+        }
 
+        return asset('storage/' . $this->signature_image);
+    }
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
+    }
     public function toArray()
     {
         $array = parent::toArray();
@@ -179,7 +190,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function hasPermission($permissionSlug, $action)
     {
-        if (! $this->role) {
+        if (!$this->role) {
             return false;
         }
 
@@ -191,7 +202,7 @@ class User extends Authenticatable implements JWTSubject
             ->where('slug', $permissionSlug)
             ->first();
 
-        if (! $permission) {
+        if (!$permission) {
             return false;
         }
 
@@ -236,5 +247,22 @@ class User extends Authenticatable implements JWTSubject
     public function blockedByUsers()
     {
         return $this->hasMany(UserBlock::class, 'blocked_id');
+    }
+    public function getPhoneAttribute($value)
+    {
+        $phone = ltrim($value, '0');
+
+        $countryCode = $this->country_code ?? '+971';
+
+        // avoid duplicate (jo already +971 hoy)
+        if (str_starts_with($phone, '+')) {
+            return $phone;
+        }
+
+        return $countryCode . $phone;
+    }
+     public function getBodAttribute($value)
+    {
+        return $value ? \Carbon\Carbon::parse($value)->format('Y-m-d') : null;
     }
 }

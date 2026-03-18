@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -33,7 +34,7 @@ class AuthController extends Controller
             'company_id' => 'nullable|exists:companies,id',
             'role_id' => 'nullable|exists:roles,id',
             'nationality_id' => 'nullable|exists:nationalities,id',
-            'bod' => 'nullable|date|before_or_equal:'.now()->subYears(18)->format('Y-m-d'),
+            'bod' => 'nullable|date|before_or_equal:' . now()->subYears(18)->format('Y-m-d'),
             'gender' => 'nullable|in:male,female,other',
             'agree' => 'required|boolean',
             'p_image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -47,7 +48,6 @@ class AuthController extends Controller
                 'errors' => $validator->errors(),
             ], 422);
         }
-
         $autoPassword = '123456' ?? Str::random(8); // example: A8f#kP2Q
 
         $profileImagePath = null;
@@ -68,15 +68,18 @@ class AuthController extends Controller
             'company_id' => $request->company_id,
             'role_id' => $request->role_id,
             'nationality_id' => $request->nationality_id,
-            'bod' => $request->bod,
+            'dob' => $request->bod,
             'gender' => $request->gender,
+            'address' => $request->address,
+            'country_code' => $request->country_code ?? "+971",
+            'position_id' => $request->position_id,
             'agree' => $request->agree ? 1 : 0,
             'p_image' => $profileImagePath,
             'signature_image' => $signatureImagePath,
         ];
 
         // If creating new user → add password + created_by_user
-        if (! $request->id) {
+        if (!$request->id) {
             $data['password'] = Hash::make($autoPassword);
             $data['passd'] = $autoPassword;
             $data['created_by_user'] = $request->created_by_user ?? Auth::id();
@@ -95,7 +98,7 @@ class AuthController extends Controller
             }
         }
 
-        if (! $request->id) {
+        if (!$request->id) {
             $roleName = strtolower(trim($user->role?->name ?? ''));
 
             if ($roleName !== 'manager') {
@@ -106,10 +109,6 @@ class AuthController extends Controller
 
             $user->save();
         }
-
-        $user->p_image = $user->p_image ? asset('storage/'.$user->p_image) : null;
-        $user->signature_image = $user->signature_image ? asset('storage/'.$user->signature_image) : null;
-
         // $token = JWTAuth::fromUser($user);
         Mail::raw("Your temporary password is: $user->passd", function ($message) use ($user) {
             $message->to($user->email)
@@ -118,7 +117,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Signup successful',
+            'message' => 'Add successful',
             // 'token' => $token,
             'password' => $autoPassword,
             'user' => $user,
@@ -137,10 +136,10 @@ class AuthController extends Controller
         $user = User::where('email', $request->login)
             ->orWhere('phone', $request->login)
             ->orWhere('employeeId', $request->login)
-            ->with(['role.permissions', 'company', 'nationality'])
+            ->with(['role.permissions', 'company', 'nationality', 'position'])
             ->first();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => false,
                 'message' => 'User not found',
@@ -166,7 +165,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        if (! Hash::check($request->password, $user->password)) {
+        if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => false,
                 'message' => 'Invalid credentials',
@@ -206,6 +205,10 @@ class AuthController extends Controller
             'nationality' => $user->nationality?->name,
             'signature_image_url' => $user->signature_image_url,
             'p_image_url' => $user->p_image_url,
+            'position' => $user->position?->name ?? "",
+            'position_id' => $user->position_id ?? "",
+            'address' => $user->address ?? "",
+            'country_code' => $user->country_code ?? "",
         ];
         //  Super Admin Login (Web Only)
         if ($user->is_super_admin == 1 && $platform === 'web') {
@@ -244,15 +247,59 @@ class AuthController extends Controller
 
     public function profile()
     {
-        $user = authUser();
+        $authUser = authUser();
 
-        if (! is_object($user)) {
-            return $user;
+        if (!is_object($authUser)) {
+            return $authUser;
         }
+        $user = User::with(['role.permissions', 'company', 'nationality', 'position'])->find($authUser->id);
+        $responseUser = [
+            'id' => $user->id,
+            'created_by_user' => $user->created_by_user ?? "",
+            'employeeId' => $user->employeeId ?? "",
+            'first_name' => $user->first_name ?? "",
+            'last_name' => $user->last_name ?? "",
+            'phone' => $user->phone ?? "",
+            'email' => $user->email ?? "",
+            'avatar_path' => $user->avatar_path ?? "",
+            'dob' => $user->bod ?? "",
+            'gender' => $user->gender ?? "",
+            'role_id' => $user->role_id ?? "",
+            'is_super_admin' => $user->is_super_admin ?? 0,
+            'company_id' => $user->company_id ?? "",
+            'is_company_owner' => $user->is_company_owner ?? 0,
+            'nationality_id' => $user->nationality_id ?? "",
+            'agree' => (bool) ($user->agree ?? false),
+            'remember_me' => (bool) ($user->remember_me ?? false),
+            'status' => $user->status ?? 0,
+            'login_count' => $user->login_count ?? 0,
+            'last_login_ip' => $user->last_login_ip ?? "",
+            'email_otp' => $user->email_otp ?? "",
+            'email_verified_at' => $user->email_verified_at ?? "",
+            'p_image_url' => $user->p_image_url ?? "",
+            'signature_image_url' => $user->signature_image_url ?? "",
+            'status_name' => $user->status_name ?? "",
+            'position' => $user->position?->name ?? "",
+            'position_id' => $user->position_id ?? "",
+            'address' => $user->address ?? "",
+            'country_code' => $user->country_code ?? "",
+            'role' => $user->role ? [
+                'id' => $user->role->id,
+                'name' => $user->role->name ?? "",
+                'slug' => $user->role->slug ?? "",
+                'company_id' => $user->role->company_id ?? "-",
+                'status' => $user->role->status ?? 0,
+                'permissions' => $user->role->permissions ?? [],
+            ] : (object) [],
+
+            'company' => $user->company ? $user->company->name : "",
+            'nationality' => $user->nationality ? $user->nationality->name : "",
+        ];
 
         return response()->json([
             'status' => true,
-            'user' => Auth::user(),
+            'message' => 'show successful',
+            'user' => $responseUser,
         ]);
     }
 
@@ -314,7 +361,7 @@ class AuthController extends Controller
             ->where('email_otp', $request->otp)
             ->first();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => false,
                 'message' => 'Invalid OTP',
@@ -339,7 +386,7 @@ class AuthController extends Controller
             ->where('email_otp', $request->otp)
             ->first();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => false,
                 'message' => 'Invalid OTP',
@@ -471,16 +518,16 @@ class AuthController extends Controller
         $isAllCompanies = $isGlobal && empty($filterCompanyId);
 
         $effectiveCompanyId = null;
-        if (! $isAllCompanies) {
-            $effectiveCompanyId = $isSuperAdmin && ! empty($filterCompanyId)
+        if (!$isAllCompanies) {
+            $effectiveCompanyId = $isSuperAdmin && !empty($filterCompanyId)
                 ? (int) $filterCompanyId
                 : (int) $userCompanyId;
         }
 
         // Validate company_id if provided
-        if ($isSuperAdmin && ! empty($filterCompanyId)) {
+        if ($isSuperAdmin && !empty($filterCompanyId)) {
             $exists = \App\Models\Company::where('id', $effectiveCompanyId)->exists();
-            if (! $exists) {
+            if (!$exists) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Invalid company_id',
@@ -495,7 +542,7 @@ class AuthController extends Controller
 
         // Users query
         $usersQuery = \App\Models\User::query()
-            ->when(! $isAllCompanies, fn ($q) => $q->where('company_id', $effectiveCompanyId));
+            ->when(!$isAllCompanies, fn($q) => $q->where('company_id', $effectiveCompanyId));
 
         $usersTotal = (clone $usersQuery)->count();
 
@@ -517,7 +564,7 @@ class AuthController extends Controller
 
         // Tasks query
         $tasksQuery = \App\Models\Task::query()
-            ->when(! $isAllCompanies, fn ($q) => $q->where('company_id', $effectiveCompanyId));
+            ->when(!$isAllCompanies, fn($q) => $q->where('company_id', $effectiveCompanyId));
 
         $tasksTotal = (clone $tasksQuery)->count();
 
@@ -575,5 +622,82 @@ class AuthController extends Controller
             'success' => true,
             'data' => $salary,
         ]);
+    }
+    public function changePassword(Request $request)
+    {
+        $user = authUser();
+
+        if (!is_object($user)) {
+            return $user;
+        }
+
+        // Validation
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|different:current_password',
+            'confirm_password' => 'required|same:new_password',
+        ]);
+
+        // Check current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Current password is incorrect.',
+            ], 422);
+        }
+
+        // Update password
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password changed successfully.',
+        ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $user = authUser();
+
+        if (!is_object($user)) {
+            return $user;
+        }
+
+        // Optional: password confirmation
+        if ($request->filled('password')) {
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Password is incorrect.',
+                ], 422);
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            if (method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
+
+            // Delete user
+            $user->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Account deleted successfully.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong.',
+            ], 500);
+        }
     }
 }

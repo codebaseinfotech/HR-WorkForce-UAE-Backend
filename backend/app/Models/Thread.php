@@ -64,4 +64,16 @@ class Thread extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+    public function toArray()
+    {
+        $array = parent::toArray();
+
+        foreach ($array as $key => $value) {
+            if (is_null($value)) {
+                $array[$key] = '-';
+            }
+        }
+
+        return $array;
+    }
 }

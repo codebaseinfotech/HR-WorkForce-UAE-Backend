@@ -35,9 +35,21 @@ class UserBlock extends Model
                     ['blocker_id', '=', $userA],
                     ['blocked_id', '=', $userB],
                 ])->orWhere([
-                    ['blocker_id', '=', $userB],
-                    ['blocked_id', '=', $userA],
-                ]);
+                            ['blocker_id', '=', $userB],
+                            ['blocked_id', '=', $userA],
+                        ]);
             });
+    }
+    public function toArray()
+    {
+        $array = parent::toArray();
+
+        foreach ($array as $key => $value) {
+            if (is_null($value)) {
+                $array[$key] = '-';
+            }
+        }
+
+        return $array;
     }
 }

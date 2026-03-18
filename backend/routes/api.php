@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\MyLeaveController;
 use App\Http\Controllers\Api\MyTaskController;
 use App\Http\Controllers\Api\OvertimeController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\TaskAssignmentController;
@@ -43,6 +44,8 @@ Route::post('sign-in', [AuthController::class, 'signin'])->name('login');
 Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('reset-password', [AuthController::class, 'resetPassword']);
+Route::post('/change-password', [AuthController::class, 'changePassword']);
+Route::delete('/delete-account', [AuthController::class, 'deleteAccount']);
 
 Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get('my-permissions', [PermissionController::class, 'myPermissions']);
@@ -50,42 +53,51 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get('profile', [AuthController::class, 'profile']);
     Route::get('dashboard/summary', [AuthController::class, 'summary']);
 
-    Route::get('roles/{id?}',
+    Route::get(
+        'roles/{id?}',
         [RoleController::class, 'index']
     )->middleware('permission:role.manage,can_view');
 
-    Route::post('roles',
+    Route::post(
+        'roles',
         [RoleController::class, 'store']
     )->middleware('permission:role.manage,can_add');
 
-    Route::put('roles/update/{role}',
+    Route::put(
+        'roles/update/{role}',
         [RoleController::class, 'update']
     )->middleware('permission:role.manage,can_edit');
 
-    Route::delete('roles/delete/{role}',
+    Route::delete(
+        'roles/delete/{role}',
         [RoleController::class, 'destroy']
     )->middleware('permission:role.manage,can_delete');
 
     // PERMISSION ROUTES
 
-    Route::get('permissions/{id?}',
+    Route::get(
+        'permissions/{id?}',
         [PermissionController::class, 'index']
     )->middleware('permission:permission.manage,can_view');
 
-    Route::post('permissions',
+    Route::post(
+        'permissions',
         [PermissionController::class, 'store']
     )->middleware('permission:permission.manage,can_add');
 
-    Route::put('permissions/update/{permission}',
+    Route::put(
+        'permissions/update/{permission}',
         [PermissionController::class, 'update']
     )->middleware('permission:permission.manage,can_edit');
 
-    Route::delete('permissions/delete/{permission}',
+    Route::delete(
+        'permissions/delete/{permission}',
         [PermissionController::class, 'destroy']
     )->middleware('permission:permission.manage,can_delete');
     // ASSIGN ROLE PERMISSION
 
-    Route::post('roles/{role}/permissions',
+    Route::post(
+        'roles/{role}/permissions',
         [RolePermissionController::class, 'updatePermissions']
     )->middleware('permission:role.manage,can_edit');
 
@@ -93,11 +105,22 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get('company/list/{id?}', [CompanyController::class, 'index']);
     Route::delete('company/delete/{id}', [CompanyController::class, 'delete']);
 
+    Route::prefix('positions')->group(function () {
+        Route::get('/', [PositionController::class, 'index']);
+        Route::post('/store', [PositionController::class, 'store']);
+        Route::get('/show/{id}', [PositionController::class, 'show']);
+        Route::post('/update/{id}', [PositionController::class, 'update']);
+        Route::delete('/delete/{id}', [PositionController::class, 'destroy']);
+        Route::post('/change-status/{id}', [PositionController::class, 'changeStatus']);
+    });
+
     Route::prefix('attendances')->group(function () {
         Route::get('/all', [AttendanceController::class, 'index']); // List all attendances
         Route::post('/mark', [AttendanceController::class, 'mark']); // Mark attendance
         Route::get('/report', [AttendanceController::class, 'report']);
         Route::get('/my-attendance/report/export', [AttendanceController::class, 'export']);
+        Route::get('/date-detail', [AttendanceController::class, 'dateDetail']);
+        Route::get('/history', [AttendanceController::class, 'attendanceHistory']);
     });
 
     Route::prefix('overtimes')->group(function () {
