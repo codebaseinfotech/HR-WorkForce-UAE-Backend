@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Models\Company;
 use App\Models\HolidayCalendar;
 use App\Models\LeaveRequest;
+use App\Models\User;
 use App\Models\WorkSchedule;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -720,189 +721,213 @@ class AttendanceController extends Controller
 
     public function report(Request $request)
     {
-        $user = Auth::user();
-        $companyId = $user->company_id;
+       $companyId = $request->company_id;             
         $tz = 'Asia/Kolkata';
 
         $data = $request->validate([
             'range' => 'nullable|in:today,week,month,year,last_7_days,last_30_days,last_3_months',
             'from' => 'nullable|date_format:Y-m-d',
             'to' => 'nullable|date_format:Y-m-d|after_or_equal:from',
+            'company_id' => 'nullable|exists:companies,id',
+            'user_id' => 'nullable|exists:users,id',
         ]);
+
+        if (!$companyId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Company id is required',
+            ], 422);
+        }
 
         [$from, $to] = $this->resolveRange($data, $tz);
 
-        $schedule = WorkSchedule::where('company_id', $companyId)
-            ->where('role_id', $user->role_id)
-            ->first();
+        $schedule = WorkSchedule::where('company_id', $companyId)->first();
 
         if (!$schedule) {
             return response()->json([
                 'status' => false,
-                'message' => 'Work schedule not set for your role',
+                'message' => 'Work schedule not set for this company',
             ], 422);
         }
 
         $holidayMap = $this->getHolidayMap($companyId, (int) $from->year, (int) $to->year);
 
-        $attRows = Attendance::where('company_id', $companyId)
-            ->where('user_id', $user->id)
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->get()
-            ->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
+        $usersQuery = User::where('company_id', $companyId);
 
-        $leaveRows = LeaveRequest::where('company_id', $companyId)
-            ->where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->whereDate('to_date', '>=', $from->toDateString())
-            ->whereDate('from_date', '<=', $to->toDateString())
-            ->get();
+        if (!empty($data['user_id'])) {
+            $usersQuery->where('id', $data['user_id']);
+        }
 
-        $leaveDates = $this->buildLeaveDatesSet($leaveRows, $from, $to);
+        $users = $usersQuery->get();
 
-        $period = CarbonPeriod::create($from->toDateString(), $to->toDateString());
+        if ($users->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No users found',
+            ], 404);
+        }
 
-        $totalDays = 0;
-        $weeklyOffDays = 0;
-        $holidayDays = 0;
-        $workingDays = 0;
+        $reports = [];
 
-        $presentDays = 0;
-        $leaveDays = 0;
-        $absentDays = 0;
+        foreach ($users as $user) {
+            $attRows = Attendance::where('company_id', $companyId)
+                ->where('user_id', $user->id)
+                ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+                ->get()
+                ->keyBy(fn($a) => Carbon::parse($a->date)->toDateString());
 
-        $totalWorkMinutes = 0;
-        $totalOvertimeMinutes = 0;
+            $leaveRows = LeaveRequest::where('company_id', $companyId)
+                ->where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->whereDate('to_date', '>=', $from->toDateString())
+                ->whereDate('from_date', '<=', $to->toDateString())
+                ->get();
 
-        $days = [];
+            $leaveDates = $this->buildLeaveDatesSet($leaveRows, $from, $to);
 
-        foreach ($period as $d) {
+            $period = CarbonPeriod::create($from->toDateString(), $to->toDateString());
 
-            $totalDays++;
-            $ds = $d->toDateString();
+            $totalDays = 0;
+            $weeklyOffDays = 0;
+            $holidayDays = 0;
+            $workingDays = 0;
 
-            $isHoliday = isset($holidayMap[$ds]);
-            $isWeekOff = $this->isWeekOff($d, $schedule->weekly_rules, $schedule->monthly_rules ?? null);
+            $presentDays = 0;
+            $leaveDays = 0;
+            $absentDays = 0;
 
-            if ($isHoliday) {
-                $holidayDays++;
-            }
-            if ($isWeekOff) {
-                $weeklyOffDays++;
-            }
+            $totalWorkMinutes = 0;
+            $totalOvertimeMinutes = 0;
 
-            $isWorkingDay = (!$isHoliday && !$isWeekOff);
-            if ($isWorkingDay) {
-                $workingDays++;
-            }
+            $days = [];
 
-            $att = $attRows->get($ds);
+            foreach ($period as $d) {
+                $totalDays++;
+                $ds = $d->toDateString();
 
-            $present = false;
-            $workMinutes = 0;
-            $shiftOvertime = 0;
-            $sessionOvertime = 0;
+                $isHoliday = isset($holidayMap[$ds]);
+                $isWeekOff = $this->isWeekOff($d, $schedule->weekly_rules, $schedule->monthly_rules ?? null);
 
-            if ($att) {
-
-                $workMinutes = (int) ($att->total_minutes ?? 0);
-                $shiftOvertime = (int) ($att->overtime_minutes ?? 0);
-
-                if ($workMinutes === 0 && $att->check_in && $att->check_out) {
-                    $workMinutes = $this->calcWorkMinutes(
-                        $att->check_in,
-                        $att->check_out,
-                        $att->break_in,
-                        $att->break_out
-                    );
+                if ($isHoliday) {
+                    $holidayDays++;
                 }
 
-                // session overtime
-                if ($att->overtime_in && $att->overtime_out) {
-                    $otIn = strtotime($att->overtime_in);
-                    $otOut = strtotime($att->overtime_out);
-                    $sessionOvertime = max((int) (($otOut - $otIn) / 60), 0);
+                if ($isWeekOff) {
+                    $weeklyOffDays++;
                 }
 
-                $present = ($att->check_in != null);
-            }
+                $isWorkingDay = (!$isHoliday && !$isWeekOff);
 
-            $onLeave = isset($leaveDates[$ds]);
+                if ($isWorkingDay) {
+                    $workingDays++;
+                }
 
-            $dayStatus = 'N/A';
+                $att = $attRows->get($ds);
 
-            if ($isHoliday) {
-                $dayStatus = 'holiday';
-            } elseif ($isWeekOff) {
-                $dayStatus = 'weekly_off';
-            } else {
+                $present = false;
+                $workMinutes = 0;
+                $shiftOvertime = 0;
+                $sessionOvertime = 0;
 
-                if ($onLeave) {
-                    $dayStatus = 'leave';
-                    $leaveDays++;
-                } elseif ($present) {
-                    $dayStatus = 'present';
-                    $presentDays++;
+                if ($att) {
+                    $workMinutes = (int) ($att->total_minutes ?? 0);
+                    $shiftOvertime = (int) ($att->overtime_minutes ?? 0);
 
-                    $totalWorkMinutes += ($workMinutes + $shiftOvertime + $sessionOvertime);
-                    $totalOvertimeMinutes += ($shiftOvertime + $sessionOvertime);
+                    if ($workMinutes === 0 && $att->check_in && $att->check_out) {
+                        $workMinutes = $this->calcWorkMinutes(
+                            $att->check_in,
+                            $att->check_out,
+                            $att->break_in,
+                            $att->break_out
+                        );
+                    }
 
+                    if ($att->overtime_in && $att->overtime_out) {
+                        $otIn = strtotime($att->overtime_in);
+                        $otOut = strtotime($att->overtime_out);
+                        $sessionOvertime = max((int) (($otOut - $otIn) / 60), 0);
+                    }
+
+                    $present = ($att->check_in != null);
+                }
+
+                $onLeave = isset($leaveDates[$ds]);
+
+                $dayStatus = 'N/A';
+
+                if ($isHoliday) {
+                    $dayStatus = 'holiday';
+                } elseif ($isWeekOff) {
+                    $dayStatus = 'weekly_off';
                 } else {
-                    $dayStatus = 'absent';
-                    $absentDays++;
+                    if ($onLeave) {
+                        $dayStatus = 'leave';
+                        $leaveDays++;
+                    } elseif ($present) {
+                        $dayStatus = 'present';
+                        $presentDays++;
+
+                        $totalWorkMinutes += ($workMinutes + $shiftOvertime + $sessionOvertime);
+                        $totalOvertimeMinutes += ($shiftOvertime + $sessionOvertime);
+                    } else {
+                        $dayStatus = 'absent';
+                        $absentDays++;
+                    }
                 }
+
+                $days[] = [
+                    'date' => $ds,
+                    'day' => $d->format('D'),
+                    'status' => $dayStatus,
+                    'holiday_title' => $isHoliday ? ($holidayMap[$ds]['title'] ?? null) : null,
+                    'attendance' => $att ? [
+                        'check_in' => $att->check_in,
+                        'check_out' => $att->check_out,
+                        'break_in' => $att->break_in,
+                        'break_out' => $att->break_out,
+                        'overtime_in' => $att->overtime_in,
+                        'overtime_out' => $att->overtime_out,
+                        'work_minutes' => $workMinutes,
+                        'shift_overtime_minutes' => $shiftOvertime,
+                        'session_overtime_minutes' => $sessionOvertime,
+                        'final_total_minutes' => $workMinutes + $shiftOvertime + $sessionOvertime,
+                    ] : null,
+                ];
             }
 
-            $days[] = [
-                'date' => $ds,
-                'day' => $d->format('D'),
-                'status' => $dayStatus,
-                'holiday_title' => $isHoliday ? ($holidayMap[$ds]['title'] ?? null) : null,
-
-                'attendance' => $att ? [
-                    'check_in' => $att->check_in,
-                    'check_out' => $att->check_out,
-                    'break_in' => $att->break_in,
-                    'break_out' => $att->break_out,
-                    'overtime_in' => $att->overtime_in,
-                    'overtime_out' => $att->overtime_out,
-                    'work_minutes' => $workMinutes,
-                    'shift_overtime_minutes' => $shiftOvertime,
-                    'session_overtime_minutes' => $sessionOvertime,
-                    'final_total_minutes' => $workMinutes + $shiftOvertime + $sessionOvertime,
-                ] : null,
+            $reports[] = [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
+                    'company_id' => $companyId,
+                ],
+                'summary' => [
+                    'total_days' => $totalDays,
+                    'working_days' => $workingDays,
+                    'holiday_days' => $holidayDays,
+                    'weekly_off_days' => $weeklyOffDays,
+                    'present_days' => $presentDays,
+                    'leave_days' => $leaveDays,
+                    'absent_days' => $absentDays,
+                    'total_worked' => $this->fmtDuration($totalWorkMinutes),
+                    'total_overtime' => $this->fmtDuration($totalOvertimeMinutes),
+                ],
+                'days' => $days,
             ];
         }
 
         return response()->json([
             'status' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
-                'company_id' => $companyId,
-            ],
             'range' => [
                 'from' => $from->toDateString(),
                 'to' => $to->toDateString(),
                 'timezone' => $tz,
             ],
-            'summary' => [
-                'total_days' => $totalDays,
-                'working_days' => $workingDays,
-                'holiday_days' => $holidayDays,
-                'weekly_off_days' => $weeklyOffDays,
-
-                'present_days' => $presentDays,
-                'leave_days' => $leaveDays,
-                'absent_days' => $absentDays,
-
-                'total_worked' => $this->fmtDuration($totalWorkMinutes),
-                'total_overtime' => $this->fmtDuration($totalOvertimeMinutes),
-            ],
-            'days' => $days,
+            'company_id' => $companyId,
+            'total_users' => $users->count(),
+            'reports' => $reports,
         ]);
     }
-
     private function resolveRange(array $data, string $tz): array
     {
         $now = now()->setTimezone($tz);
