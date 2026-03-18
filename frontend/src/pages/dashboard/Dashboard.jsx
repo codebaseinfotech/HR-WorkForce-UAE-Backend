@@ -22,7 +22,7 @@ const Dashboard = () => {
 
     // Fetch real data from multiple APIs instead of generic stats API
     const { data: staffRes, isLoading: loadingStaff } = useGetUserFetchQuery(
-        { company_id: companyId, role: 'staff' },
+        { company_id: companyId, role: 'Employee' },
         { skip: user?.role === ROLES.SUPER_ADMIN || !companyId }
     );
     const { data: managerRes, isLoading: loadingManagers } = useGetUserFetchQuery(
@@ -199,19 +199,22 @@ const Dashboard = () => {
                                         </Tr>
                                     </Thead>
                                     <Tbody>
-                                        {managersList.slice(0, 10).map((m, i) => (
+                                        {managersList.slice(0, 10).map((m, i) => {
+                                            const roleName = typeof m.role === 'object' ? m.role?.name : m.role || 'Manager';
+                                            const fullName = `${m.first_name || m.firstName || ''} ${m.last_name || m.lastName || ''}`.trim();
+                                            return (
                                             <Tr key={m.id} bg={i % 2 === 0 ? 'white' : 'gray.50'} _hover={{ bg: 'blue.50' }}>
                                                 <Td py={3}>
                                                     <HStack spacing={3}>
-                                                        <Avatar size="sm" src={m.p_image_url} name={`${m.first_name} ${m.last_name}`} bg="blue.100" color="blue.600" />
+                                                        <Avatar size="sm" src={m.p_image_url || m.profileImage} name={fullName} bg="blue.100" color="blue.600" />
                                                         <VStack align="start" spacing={0}>
-                                                            <Text fontSize="sm" fontWeight="600" color="gray.800">{m.first_name} {m.last_name}</Text>
-                                                            <Text fontSize="xs" color="gray.500">{m.role?.name || 'Manager'}</Text>
+                                                            <Text fontSize="sm" fontWeight="600" color="gray.800">{fullName || '—'}</Text>
+                                                            <Text fontSize="xs" color="gray.500">{roleName}</Text>
                                                         </VStack>
                                                     </HStack>
                                                 </Td>
                                                 <Td>
-                                                    <HStack spacing={1}><Icon as={FiMail} color="gray.400" boxSize={3}/><Text fontSize="xs" color="gray.600">{m.email}</Text></HStack>
+                                                    <HStack spacing={1}><Icon as={FiMail} color="gray.400" boxSize={3}/><Text fontSize="xs" color="gray.600">{m.email || '—'}</Text></HStack>
                                                 </Td>
                                                 <Td>
                                                     <Badge colorScheme={m.status === 'active' || m.status === 1 ? 'green' : 'gray'} fontSize="2xs" borderRadius="full" px={2}>
@@ -219,7 +222,7 @@ const Dashboard = () => {
                                                     </Badge>
                                                 </Td>
                                             </Tr>
-                                        ))}
+                                        )})}
                                     </Tbody>
                                 </Table>
                             )}
@@ -251,25 +254,28 @@ const Dashboard = () => {
                                 <Table variant="simple" size="sm" w="100%" style={{ minWidth: '800px' }}>
                                     <Thead position="sticky" top={0} zIndex={1}>
                                         <Tr bg="gray.800">
-                                            <Th color="white" borderBottom="none" py={3}>Name</Th>
-                                            <Th color="white" borderBottom="none">Contact</Th>
-                                            <Th color="white" borderBottom="none">Status</Th>
+                                            <Th bg="gray.800" color="white" borderBottom="none" py={3}>Name</Th>
+                                            <Th bg="gray.800" color="white" borderBottom="none">Contact</Th>
+                                            <Th bg="gray.800" color="white" borderBottom="none">Status</Th>
                                         </Tr>
                                     </Thead>
                                     <Tbody>
-                                        {staffList.slice(0, 10).map((s, i) => (
+                                        {staffList.slice(0, 10).map((s, i) => {
+                                            const roleName = typeof s.role === 'object' ? s.role?.name : s.role || 'Staff';
+                                            const fullName = `${s.first_name || s.firstName || ''} ${s.last_name || s.lastName || ''}`.trim();
+                                            return (
                                             <Tr key={s.id} bg={i % 2 === 0 ? 'white' : 'gray.50'} _hover={{ bg: 'purple.50' }}>
                                                 <Td py={3}>
                                                     <HStack spacing={3}>
-                                                        <Avatar size="sm" src={s.p_image_url} name={`${s.first_name} ${s.last_name}`} bg="purple.100" color="purple.600" />
+                                                        <Avatar size="sm" src={s.p_image_url || s.profileImage} name={fullName} bg="purple.100" color="purple.600" />
                                                         <VStack align="start" spacing={0}>
-                                                            <Text fontSize="sm" fontWeight="600" color="gray.800">{s.first_name || s.firstName} {s.last_name || s.lastName}</Text>
-                                                            <Text fontSize="xs" color="gray.500">Staff</Text>
+                                                            <Text fontSize="sm" fontWeight="600" color="gray.800">{fullName || '—'}</Text>
+                                                            <Text fontSize="xs" color="gray.500">{roleName}</Text>
                                                         </VStack>
                                                     </HStack>
                                                 </Td>
                                                 <Td>
-                                                    <HStack spacing={1}><Icon as={FiMail} color="gray.400" boxSize={3}/><Text fontSize="xs" color="gray.600">{s.email}</Text></HStack>
+                                                    <HStack spacing={1}><Icon as={FiMail} color="gray.400" boxSize={3}/><Text fontSize="xs" color="gray.600">{s.email || '—'}</Text></HStack>
                                                 </Td>
                                                 <Td>
                                                     <Badge colorScheme={s.status === 'active' || s.status === 1 ? 'green' : 'gray'} fontSize="2xs" borderRadius="full" px={2}>
@@ -277,7 +283,7 @@ const Dashboard = () => {
                                                     </Badge>
                                                 </Td>
                                             </Tr>
-                                        ))}
+                                        )})}
                                     </Tbody>
                                 </Table>
                             )}
