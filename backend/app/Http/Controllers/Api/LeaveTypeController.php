@@ -28,8 +28,7 @@ class LeaveTypeController extends Controller
     // POST /leave-types/add-update
     public function store(Request $request)
     {
-        $companyId = Auth::user()->company_id;
-
+        $companyId = $request->company_id ?? Auth::user()->company_id;
         $data = $request->validate([
             'id' => 'nullable|exists:leave_types,id',
             'code' => [
@@ -37,7 +36,7 @@ class LeaveTypeController extends Controller
                 'string',
                 'max:20',
                 Rule::unique('leave_types', 'code')
-                    ->where(fn ($q) => $q->where('company_id', $companyId))
+                    ->where(fn($q) => $q->where('company_id', $companyId))
                     ->ignore($request->id),
             ],
             'name' => 'required|string|max:100',
@@ -63,7 +62,7 @@ class LeaveTypeController extends Controller
 
         if ((int) $leaveType->company_id !== (int) $companyId) {
             return response()->json([
-                'status' => false,  
+                'status' => false,
                 'message' => 'Leave type not found for your company',
             ], 404);
         }

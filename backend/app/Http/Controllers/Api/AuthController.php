@@ -109,15 +109,21 @@ class AuthController extends Controller
 
             $user->save();
         }
+
+        if (!empty($request->id)) {
+            $message = 'User updated successfully';
+        } else {
+            $message = 'User Add successfully';
+        }
         // $token = JWTAuth::fromUser($user);
-        Mail::raw("Your temporary password is: $user->passd", function ($message) use ($user) {
-            $message->to($user->email)
-                ->subject('Password Information');
-        });
+        // Mail::raw("Your temporary password is: $user->passd", function ($message) use ($user) {
+        //     $message->to($user->email)
+        //         ->subject('Password Information');
+        // });
 
         return response()->json([
             'status' => true,
-            'message' => 'Add successful',
+            'message' => $message,
             // 'token' => $token,
             'password' => $autoPassword,
             'user' => $user,

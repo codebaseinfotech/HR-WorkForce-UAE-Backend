@@ -56,50 +56,50 @@ Route::prefix('v1')->middleware('jwt.auth')->group(function () {
     Route::get(
         'roles/{id?}',
         [RoleController::class, 'index']
-    )->middleware('permission:role.manage,can_view');
+    );
 
     Route::post(
         'roles',
         [RoleController::class, 'store']
-    )->middleware('permission:role.manage,can_add');
+    );
 
     Route::put(
         'roles/update/{role}',
         [RoleController::class, 'update']
-    )->middleware('permission:role.manage,can_edit');
+    );
 
     Route::delete(
         'roles/delete/{role}',
         [RoleController::class, 'destroy']
-    )->middleware('permission:role.manage,can_delete');
+    );
 
     // PERMISSION ROUTES
 
     Route::get(
         'permissions/{id?}',
         [PermissionController::class, 'index']
-    )->middleware('permission:permission.manage,can_view');
+    );
 
     Route::post(
         'permissions',
         [PermissionController::class, 'store']
-    )->middleware('permission:permission.manage,can_add');
+    );
 
     Route::put(
         'permissions/update/{permission}',
         [PermissionController::class, 'update']
-    )->middleware('permission:permission.manage,can_edit');
+    );
 
     Route::delete(
         'permissions/delete/{permission}',
         [PermissionController::class, 'destroy']
-    )->middleware('permission:permission.manage,can_delete');
+    );
     // ASSIGN ROLE PERMISSION
 
     Route::post(
         'roles/{role}/permissions',
         [RolePermissionController::class, 'updatePermissions']
-    )->middleware('permission:role.manage,can_edit');
+    );
 
     Route::post('company/save', [CompanyController::class, 'save']);
     Route::get('company/list/{id?}', [CompanyController::class, 'index']);
