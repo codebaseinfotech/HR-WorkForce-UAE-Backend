@@ -45,6 +45,7 @@ import {
     FiPhone,
     FiRefreshCw,
     FiShield,
+    FiEye,
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -175,12 +176,11 @@ const ManagerRow = ({ manager, onDelete, isDeleting }) => {
 
     return (
         <Tr
-            _hover={{ bg: 'purple.50', cursor: 'pointer' }}
+            _hover={{ bg: 'purple.50' }}
             transition="all 0.2s"
             borderLeft="3px solid"
             borderLeftColor="transparent"
             _hover_borderLeftColor="purple.500"
-            onClick={() => navigate(`/company/manager/${manager.id}/staff`)}
             bg="white"
         >
             <Td py={4}>
@@ -228,18 +228,31 @@ const ManagerRow = ({ manager, onDelete, isDeleting }) => {
             </Td>
             <Td py={4} onClick={e => e.stopPropagation()}>
                 <Center>
-                    <Tooltip label="Remove Manager" placement="top" hasArrow>
-                        <IconButton
-                            icon={<FiTrash2 />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="red"
-                            aria-label="Delete manager"
-                            isLoading={isDeleting}
-                            onClick={() => onDelete(manager)}
-                            _hover={{ bg: 'red.50', color: 'red.600' }}
-                        />
-                    </Tooltip>
+                    <HStack spacing={2} justify="center">
+                        <Tooltip label="View Staff" placement="top" hasArrow>
+                            <IconButton
+                                icon={<Icon as={FiEye} boxSize={4} />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="purple"
+                                aria-label="View staff"
+                                onClick={(e) => { e.stopPropagation(); navigate(`/company/manager/${manager.id}/staff`); }}
+                                _hover={{ bg: 'purple.100' }}
+                            />
+                        </Tooltip>
+                        <Tooltip label="Remove Manager" placement="top" hasArrow>
+                            <IconButton
+                                icon={<FiTrash2 />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                aria-label="Delete manager"
+                                isLoading={isDeleting}
+                                onClick={() => onDelete(manager)}
+                                _hover={{ bg: 'red.50', color: 'red.600' }}
+                            />
+                        </Tooltip>
+                    </HStack>
                 </Center>
             </Td>
         </Tr>
@@ -267,10 +280,10 @@ const ManagersList = () => {
     );
 
     // Also fetch all roles for display
-    const { data: roles = [] } = useGetRolesQuery();
+    const { data: rolesData } = useGetRolesQuery();
+    const roles = Array.isArray(rolesData?.data) ? rolesData.data : (Array.isArray(rolesData) ? rolesData : []);
 
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onClose: onDrawerClose } = useDisclosure();
     const [selectedManager, setSelectedManager] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const cancelRef = useRef();
@@ -362,17 +375,7 @@ const ManagersList = () => {
                                     aria-label="Refresh"
                                 />
                             </Tooltip>
-                            <Button
-                                leftIcon={<FiShield />}
-                                size="sm"
-                                variant="outline"
-                                color="white"
-                                borderColor="whiteAlpha.300"
-                                _hover={{ bg: 'whiteAlpha.200' }}
-                                onClick={onDrawerOpen}
-                            >
-                                View All Tasks
-                            </Button>
+                            
                             <Button
                                 leftIcon={<FiPlus />}
                                 size="sm"
@@ -526,12 +529,6 @@ const ManagersList = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* View All Tasks Drawer */}
-            <ViewTasksDrawer
-                isOpen={isDrawerOpen}
-                onClose={onDrawerClose}
-                companyId={companyId}
-            />
         </DashboardLayout>
     );
 };

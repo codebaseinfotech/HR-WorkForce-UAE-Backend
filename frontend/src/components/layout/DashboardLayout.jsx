@@ -9,7 +9,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     FiHome, FiUsers, FiUserPlus, FiClock, FiMenu, FiLogOut,
     FiUserCheck, FiFolder, FiShield, FiInbox, FiCalendar,
-    FiChevronLeft, FiChevronRight
+    FiChevronLeft, FiChevronRight, FiBriefcase, FiDollarSign, FiMapPin, FiMessageSquare
 } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { getMenuItems } from '../../utils/roleConfig';
@@ -28,7 +28,7 @@ const SidebarContent = ({ isMobile, onClose, isCollapsed, toggleCollapse }) => {
 
     const iconMap = {
         FiHome, FiUsers, FiUserPlus, FiClock, FiUserCheck,
-        FiFolder, FiShield, FiInbox, FiCalendar,
+        FiFolder, FiShield, FiInbox, FiCalendar, FiBriefcase, FiDollarSign, FiMapPin, FiMessageSquare
     };
 
     const handleLogout = async () => {

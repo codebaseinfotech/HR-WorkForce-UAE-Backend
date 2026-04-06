@@ -173,8 +173,10 @@ const LeavePoliciesCard = ({ companyId }) => {
 
     const policies = data?.data || data || [];
     const policyList = Array.isArray(policies) ? policies : [];
-    const leaveTypes = (leaveTypesData?.data || leaveTypesData || []);
-    const roles = (rolesData?.data || rolesData || []).filter(r => r.slug !== 'super_admin');
+    const _lt = leaveTypesData?.data || leaveTypesData;
+    const leaveTypes = Array.isArray(_lt) ? _lt : [];
+    const _r = rolesData?.data || rolesData;
+    const roles = (Array.isArray(_r) ? _r : []).filter(r => r.slug !== 'super_admin');
 
     const [form, setForm] = useState({
         id: null,
@@ -269,24 +271,24 @@ const LeavePoliciesCard = ({ companyId }) => {
                             </HStack>
                             {p.items?.length > 0 && (
                                 <Box overflowX="auto">
-                                    <Table size="xs" variant="simple" w="100%" style={{ minWidth: '800px' }}>
+                                    <Table size="xs" variant="simple" w="100%">
                                         <Thead>
                                             <Tr>
-                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Leave Type</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" isNumeric>Quota</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Carry Fwd</Th>
-                                                <Th bg="gray.800" color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Encash</Th>
+                                                <Th bg="gray.800" px={4} color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Leave Type</Th>
+                                                <Th bg="gray.800" px={4} color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none" isNumeric>Quota</Th>
+                                                <Th bg="gray.800" px={4} color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Carry Fwd</Th>
+                                                <Th bg="gray.800" px={4} color="white" fontSize="xs" fontWeight="700" letterSpacing="wider" textTransform="uppercase" py={4} borderBottom="none">Encash</Th>
                                             </Tr>
                                         </Thead>
                                         <Tbody>
                                             {p.items.map((it, i) => (
                                                 <Tr key={i}>
-                                                    <Td fontSize="xs" py={1}>{it.leave_type?.name || `Type #${it.leave_type_id}`}</Td>
-                                                    <Td fontSize="xs" py={1} isNumeric fontWeight="600">{it.annual_quota}</Td>
-                                                    <Td fontSize="xs" py={1}>
+                                                    <Td fontSize="xs" px={4} py={3}>{it.leave_type?.name || `Type #${it.leave_type_id}`}</Td>
+                                                    <Td fontSize="xs" px={4} py={1} isNumeric fontWeight="600">{it.annual_quota}</Td>
+                                                    <Td fontSize="xs" px={4} py={1}>
                                                         {it.carry_forward ? <Badge colorScheme="green" fontSize="2xs">Yes (max {it.max_carry_forward})</Badge> : <Badge colorScheme="gray" fontSize="2xs">No</Badge>}
                                                     </Td>
-                                                    <Td fontSize="xs" py={1}>
+                                                    <Td fontSize="xs" px={4} py={1}>
                                                         {it.encashment ? <Badge colorScheme="blue" fontSize="2xs">Yes (max {it.max_encashment})</Badge> : <Badge colorScheme="gray" fontSize="2xs">No</Badge>}
                                                     </Td>
                                                 </Tr>
@@ -399,11 +401,12 @@ const WorkScheduleCard = ({ companyId }) => {
     const toast = useToast();
     const { data: rolesData } = useGetRolesQuery();
     const [addUpdate, { isLoading: isSaving }] = useAddUpdateWorkScheduleMutation();
-    const roles = (rolesData?.data || rolesData || []).filter(r => r.slug !== 'super_admin');
+    const _r = rolesData?.data || rolesData;
+    const roles = (Array.isArray(_r) ? _r : []).filter(r => r.slug !== 'super_admin');
 
     const [form, setForm] = useState({
         company_id: companyId,
-        role_id: '',
+        role_id: roles[0]?.id,
         start_time: '09:00',
         end_time: '18:00',
         break_minutes: 60,
@@ -573,25 +576,26 @@ const fmtTime = (t) => {
     return `${h % 12 || 12}:${mm} ${h >= 12 ? 'PM' : 'AM'}`;
 };
 
-const AttendanceCard = () => {
+const AttendanceCard = ({ companyId, staffId }) => {
     const toast = useToast();
     const [rangeIdx, setRangeIdx] = useState(0);
     const range = ATT_RANGES[rangeIdx].key;
 
     const { data, isLoading, isFetching } = useGetAttendanceReportQuery(
-        { range },
+        { range, company_id: companyId },
         { refetchOnMountOrArgChange: true }
     );
 
-    const summary   = data?.summary || {};
-    const days      = data?.days || [];
+    const userReport = data?.reports?.find(r => String(r.user?.id) === String(staffId)) || {};
+    const summary   = userReport.summary || {};
+    const days      = userReport.days || [];
     const dateRange = data?.range || {};
 
     // ── Export handler ──
     const handleExport = () => {
         const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         const token = localStorage.getItem('token');
-        const url = `${baseUrl}/api/v1/attendances/my-attendance/report/export?range=${range}`;
+        const url = `${baseUrl}/api/v1/attendances/my-attendance/report/export?range=${range}&user_id=${staffId || ''}`;
 
         fetch(url, { headers: { Authorization: `Bearer ${token}`, platform: 'web' } })
             .then(res => { if (!res.ok) throw new Error(); return res.blob(); })
@@ -849,7 +853,7 @@ const StaffDetail = () => {
 
                         {/* Attendance */}
                         <TabPanel p={0}>
-                            <AttendanceCard />
+                            <AttendanceCard companyId={companyId} staffId={staffId} />
                         </TabPanel>
 
                         {/* Overview */}

@@ -21,15 +21,17 @@ export const rolePermissions = {
         '/company/create-user',
         '/company/roles',
         '/company/permissions/:roleId',
+        '/company/positions',
+        '/company/teams',
+        '/company/holiday-calendar',
+        '/company/salaries',
+        '/company/live-location',
+        '/company/chat',
         '/staff/list',
-        '/checkin-checkout',
-        '/company/all-attendance',
     ],
     [ROLES.MANAGER]: [
         '/dashboard',
         '/staff/list',
-        '/checkin-checkout',
-        '/company/all-attendance',
     ]
 };
 
@@ -74,19 +76,39 @@ export const roleMenuItems = {
             icon: 'FiShield'
         },
         {
+            label: 'Positions',
+            path: '/company/positions',
+            icon: 'FiBriefcase'
+        },
+        {
+            label: 'Teams',
+            path: '/company/teams',
+            icon: 'FiUsers'
+        },
+        {
+            label: 'Holidays',
+            path: '/company/holiday-calendar',
+            icon: 'FiCalendar'
+        },
+        {
+            label: 'Salaries',
+            path: '/company/salaries',
+            icon: 'FiDollarSign'
+        },
+        {
+            label: 'Live Location',
+            path: '/company/live-location',
+            icon: 'FiMapPin'
+        },
+        {
+            label: 'Chat',
+            path: '/company/chat',
+            icon: 'FiMessageSquare'
+        },
+        {
             label: 'Staff Management',
             path: '/staff/list',
             icon: 'FiFolder'
-        },
-        {
-            label: 'Check-in/Check-out',
-            path: '/checkin-checkout',
-            icon: 'FiClock'
-        },
-        {
-            label: 'Team Attendance',
-            path: '/company/all-attendance',
-            icon: 'FiUsers'
         }
     ],
     [ROLES.MANAGER]: [
@@ -98,16 +120,6 @@ export const roleMenuItems = {
         {
             label: 'Staff Management',
             path: '/staff/list',
-            icon: 'FiUsers'
-        },
-        {
-            label: 'Check-in/Check-out',
-            path: '/checkin-checkout',
-            icon: 'FiClock'
-        },
-        {
-            label: 'Team Attendance',
-            path: '/company/all-attendance',
             icon: 'FiUsers'
         }
     ]

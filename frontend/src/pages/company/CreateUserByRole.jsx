@@ -52,7 +52,8 @@ const CreateUserByRole = () => {
     const { user } = useAuth();
 
     // RTK Query
-    const { data: roles = [], isLoading: rolesLoading } = useGetRolesQuery();
+    const { data: rolesData, isLoading: rolesLoading } = useGetRolesQuery();
+    const roles = Array.isArray(rolesData?.data) ? rolesData.data : (Array.isArray(rolesData) ? rolesData : []);
     const { data: natsResponse, isLoading: natsLoading } = useGetNationalitiesQuery();
     const [signup, { isLoading: isCreating }] = useSignupMutation();
 
@@ -77,7 +78,7 @@ const CreateUserByRole = () => {
     const [signatureFile, setSignatureFile] = useState(null);
     const [signatureName, setSignatureName] = useState('');
 
-    const nationalities = natsResponse?.data || natsResponse || [];
+    const nationalities = Array.isArray(natsResponse?.data) ? natsResponse.data : (Array.isArray(natsResponse) ? natsResponse : []);
     const selectedRole = roles.find(r => r.id === parseInt(form.role_id));
 
     const handleChange = (e) => {

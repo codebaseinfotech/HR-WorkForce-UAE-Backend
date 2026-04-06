@@ -45,7 +45,8 @@ const Roles = () => {
     const { isOpen, onOpen, onClose } = useDisclosure();
 
     // RTK Query
-    const { data: roles = [], isLoading, refetch } = useGetRolesQuery();
+    const { data: rolesData, isLoading, refetch } = useGetRolesQuery();
+    const roles = Array.isArray(rolesData?.data) ? rolesData.data : (Array.isArray(rolesData) ? rolesData : []);
     const [createRole, { isLoading: isCreating }] = useCreateRoleMutation();
     const [deleteRole] = useDeleteRoleMutation();
 
@@ -80,6 +81,7 @@ const Roles = () => {
 
         try {
             await createRole({
+                company_id: localStorage.getItem('companyId'),
                 name: newRole.name,
                 slug: newRole.slug || newRole.name.toLowerCase().replace(/\s+/g, '_'),
             }).unwrap();

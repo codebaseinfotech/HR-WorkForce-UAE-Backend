@@ -48,7 +48,8 @@ const Permissions = () => {
     const navigate = useNavigate();
     const toast = useToast();
 
-    const { data: roles = [], isLoading: rolesLoading } = useGetRolesQuery();
+    const { data: rolesData, isLoading: rolesLoading } = useGetRolesQuery();
+    const roles = Array.isArray(rolesData?.data) ? rolesData.data : (Array.isArray(rolesData) ? rolesData : []);
     const { data: permissionsResponse, isLoading: permsLoading } = useGetPermissionsQuery();
     const [saveRolePermissions, { isLoading: isSaving }] = useSaveRolePermissionsMutation();
 

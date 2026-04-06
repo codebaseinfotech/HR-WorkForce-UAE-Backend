@@ -30,7 +30,12 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const apiSlice = createApi({
     reducerPath: 'api',
     baseQuery: baseQueryWithReauth,
-    tagTypes: ['User', 'Staff', 'Company', 'CompanyRequest', 'Manager', 'Stats', 'Task', 'TaskComment', 'TaskDocument', 'TaskChat', 'LeaveType', 'LeavePolicy', 'WorkSchedule', 'Attendance'],
+    tagTypes: [
+        'User', 'Staff', 'Company', 'CompanyRequest', 'Manager', 'Stats', 'Task', 
+        'TaskComment', 'TaskDocument', 'TaskChat', 'LeaveType', 'LeavePolicy', 
+        'WorkSchedule', 'Attendance', 'Position', 'Overtime', 'Leave', 'Thread', 
+        'Message', 'Team', 'Holiday', 'EmployeeSalary', 'Faq', 'LiveLocation'
+    ],
     endpoints: (builder) => ({
         // Auth endpoints
         login: builder.mutation({
@@ -549,11 +554,12 @@ export const apiSlice = createApi({
             providesTags: ['Attendance'],
         }),
         getAttendanceReport: builder.query({
-            query: ({ range, from, to } = {}) => {
+            query: ({ range, from, to, company_id } = {}) => {
                 const p = new URLSearchParams();
                 if (range) p.append('range', range);
                 if (from)  p.append('from', from);
                 if (to)    p.append('to', to);
+                if (company_id) p.append('company_id', company_id);
                 return `/api/v1/attendances/report?${p.toString()}`;
             },
             providesTags: ['Attendance'],
@@ -566,6 +572,301 @@ export const apiSlice = createApi({
                 if (to)    p.append('to', to);
                 return `/api/v1/attendances/my-attendance/report/export?${p.toString()}`;
             },
+        }),
+
+        // ── Positions ────────────────────────────────────────────────────────
+        getPositions: builder.query({
+            query: () => '/api/v1/positions',
+            providesTags: ['Position'],
+        }),
+        getPositionById: builder.query({
+            query: (id) => `/api/v1/positions/show/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Position', id }],
+        }),
+        createPosition: builder.mutation({
+            query: (body) => ({
+                url: '/api/v1/positions/store',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Position'],
+        }),
+        updatePosition: builder.mutation({
+            query: ({ id, ...body }) => ({
+                url: `/api/v1/positions/update/${id}`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Position'],
+        }),
+        deletePosition: builder.mutation({
+            query: (id) => ({
+                url: `/api/v1/positions/delete/${id}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: ['Position'],
+        }),
+        changePositionStatus: builder.mutation({
+            query: ({ id, status }) => ({
+                url: `/api/v1/positions/change-status/${id}`,
+                method: 'POST',
+                body: { status },
+            }),
+            invalidatesTags: ['Position'],
+        }),
+
+        // ── Overtimes ────────────────────────────────────────────────────────
+        getOvertimes: builder.query({
+            query: () => '/api/v1/overtimes',
+            providesTags: ['Overtime'],
+        }),
+        createOvertime: builder.mutation({
+            query: (body) => ({
+                url: '/api/v1/overtimes/add',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Overtime'],
+        }),
+
+        // ── Leaves (Global & Admin) ──────────────────────────────────────────
+        getLeaves: builder.query({
+            query: () => '/api/v1/leaves',
+            providesTags: ['Leave'],
+        }),
+        applyLeaveGlobal: builder.mutation({
+            query: (body) => ({
+                url: '/api/v1/leaves/apply',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Leave'],
+        }),
+        leaveRequestAction: builder.mutation({
+            query: ({ id, action, note }) => ({
+                url: `/api/v1/leave-requests/${id}/action`,
+                method: 'POST',
+                body: { action, note },
+            }),
+            invalidatesTags: ['Leave'],
+        }),
+
+        // ── My Leaves (Employee Dashboard) ───────────────────────────────────
+        getMyLeavesSummary: builder.query({
+            query: () => '/api/v1/my-leaves/summary',
+            providesTags: ['Leave'],
+        }),
+        getMyLeavesHistory: builder.query({
+            query: () => '/api/v1/my-leaves/history',
+            providesTags: ['Leave'],
+        }),
+        applyMyLeave: builder.mutation({
+            query: (body) => ({
+                url: '/api/v1/my-leaves/apply',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: ['Leave'],
+        }),
+
+        // ── Block / Unblock ──────────────────────────────────────────────────
+        blockUserById: builder.mutation({
+            query: (body) => ({ url: '/api/v1/block', method: 'POST', body }),
+            invalidatesTags: ['User', 'Staff', 'Manager'],
+        }),
+        unblockUserById: builder.mutation({
+            query: (body) => ({ url: '/api/v1/unblock', method: 'DELETE', body }),
+            invalidatesTags: ['User', 'Staff', 'Manager'],
+        }),
+        blockUserInPath: builder.mutation({
+            query: (userId) => ({ url: `/api/v1/users/${userId}/block`, method: 'POST' }),
+            invalidatesTags: ['User', 'Staff', 'Manager'],
+        }),
+        unblockUserInPath: builder.mutation({
+            query: (userId) => ({ url: `/api/v1/users/${userId}/block`, method: 'DELETE' }),
+            invalidatesTags: ['User', 'Staff', 'Manager'],
+        }),
+
+        // ── Threads & Messages (Chat) ────────────────────────────────────────
+        getThreads: builder.query({
+            query: () => '/api/v1/threads',
+            providesTags: ['Thread'],
+        }),
+        createDirectThread: builder.mutation({
+            query: (body) => ({ url: '/api/v1/threads/direct', method: 'POST', body }),
+            invalidatesTags: ['Thread'],
+        }),
+        createGroupThread: builder.mutation({
+            query: (body) => ({ url: '/api/v1/threads/group', method: 'POST', body }),
+            invalidatesTags: ['Thread'],
+        }),
+        addThreadMembers: builder.mutation({
+            query: ({ threadId, user_ids }) => ({ url: `/api/v1/threads/${threadId}/members`, method: 'POST', body: { user_ids } }),
+            invalidatesTags: ['Thread'],
+        }),
+        leaveThread: builder.mutation({
+            query: (threadId) => ({ url: `/api/v1/threads/${threadId}/leave`, method: 'POST' }),
+            invalidatesTags: ['Thread'],
+        }),
+        getThreadMembers: builder.query({
+            query: (threadId) => `/api/v1/threads/${threadId}/members`,
+            providesTags: ['User', 'Thread'],
+        }),
+        promoteThreadAdmin: builder.mutation({
+            query: ({ threadId, user_id }) => ({ url: `/api/v1/threads/${threadId}/admins`, method: 'POST', body: { user_id } }),
+            invalidatesTags: ['Thread'],
+        }),
+        demoteThreadAdminId: builder.mutation({
+            query: ({ threadId, userId }) => ({ url: `/api/v1/threads/${threadId}/admins/${userId}`, method: 'DELETE' }),
+            invalidatesTags: ['Thread'],
+        }),
+        demoteThreadAdmin: builder.mutation({
+            query: ({ threadId, user_id }) => ({ url: `/api/v1/threads/${threadId}/admins`, method: 'DELETE', body: { user_id } }),
+            invalidatesTags: ['Thread'],
+        }),
+        getMessages: builder.query({
+            query: (threadId) => `/api/v1/threads/${threadId}/messages`,
+            providesTags: ['Message'],
+        }),
+        sendMessage: builder.mutation({
+            query: ({ threadId, formData }) => ({ url: `/api/v1/threads/${threadId}/messages`, method: 'POST', body: formData }),
+            invalidatesTags: ['Message', 'Thread'],
+        }),
+        deleteMessage: builder.mutation({
+            query: (messageId) => ({ url: `/api/v1/messages/${messageId}`, method: 'DELETE' }),
+            invalidatesTags: ['Message'],
+        }),
+        markThreadRead: builder.mutation({
+            query: (threadId) => ({ url: `/api/v1/threads/${threadId}/read`, method: 'POST' }),
+            invalidatesTags: ['Thread', 'Message'],
+        }),
+        getMessageReads: builder.query({
+            query: (messageId) => `/api/v1/messages/${messageId}/reads`,
+            providesTags: ['Message'],
+        }),
+
+        // ── Teams ────────────────────────────────────────────────────────────
+        getTeams: builder.query({
+            query: () => '/api/v1/teams/fetch',
+            providesTags: ['Team'],
+        }),
+        addUpdateTeam: builder.mutation({
+            query: (body) => ({ url: '/api/v1/teams/add-update', method: 'POST', body }),
+            invalidatesTags: ['Team'],
+        }),
+        deleteTeam: builder.mutation({
+            query: (teamId) => ({ url: `/api/v1/teams/${teamId}`, method: 'DELETE' }),
+            invalidatesTags: ['Team'],
+        }),
+
+        // ── Holiday Calendar ─────────────────────────────────────────────────
+        getHolidayCalendarsYear: builder.query({
+            query: ({ company_id, year } = {}) => {
+                const p = new URLSearchParams();
+                if (company_id) p.append('company_id', company_id);
+                if (year) p.append('year', year);
+                return `/api/v1/holiday-calendars/year?${p.toString()}`;
+            },
+            providesTags: ['Holiday'],
+        }),
+        addUpdateHoliday: builder.mutation({
+            query: (body) => ({ url: '/api/v1/holiday-calendars/holidays/add-update', method: 'POST', body }),
+            invalidatesTags: ['Holiday'],
+        }),
+        deleteHoliday: builder.mutation({
+            query: (body) => ({ url: '/api/v1/holiday-calendars/holidays/delete', method: 'DELETE', body }),
+            invalidatesTags: ['Holiday'],
+        }),
+
+        // ── Leave Balances ───────────────────────────────────────────────────
+        generateLeaveBalances: builder.mutation({
+            query: (body) => ({ url: '/api/v1/leave-balances/generate', method: 'POST', body }),
+            invalidatesTags: ['LeavePolicy', 'Leave'],
+        }),
+
+        // ── Employee Salaries ────────────────────────────────────────────────
+        getEmployeeSalaries: builder.query({
+            query: () => '/api/v1/employee-salaries',
+            providesTags: ['EmployeeSalary'],
+        }),
+        getEmployeeSalaryById: builder.query({
+            query: (id) => `/api/v1/employee-salaries/${id}`,
+            providesTags: (result, error, id) => [{ type: 'EmployeeSalary', id }],
+        }),
+        addUpdateEmployeeSalary: builder.mutation({
+            query: (body) => ({ url: '/api/v1/employee-salaries/add-update', method: 'POST', body }),
+            invalidatesTags: ['EmployeeSalary'],
+        }),
+        deleteEmployeeSalary: builder.mutation({
+            query: (id) => ({ url: `/api/v1/employee-salaries/${id}`, method: 'DELETE' }),
+            invalidatesTags: ['EmployeeSalary'],
+        }),
+        getSalarySlipPdfUrl: builder.query({
+            query: ({ id } = {}) => `/api/v1/salary-slip/pdf?id=${id}`,
+        }),
+        getSalarySlipPdfRangeUrl: builder.query({
+            query: ({ from, to } = {}) => `/api/v1/salary-slip/pdf-range?from=${from}&to=${to}`,
+        }),
+
+        // ── Live Location ────────────────────────────────────────────────────
+        pingLocation: builder.mutation({
+            query: (body) => ({ url: '/api/v1/live/location/ping', method: 'POST', body }),
+            invalidatesTags: ['LiveLocation'],
+        }),
+        getMyLocation: builder.query({
+            query: () => '/api/v1/live/location/me',
+            providesTags: ['LiveLocation'],
+        }),
+        getCompanyLocations: builder.query({
+            query: () => '/api/v1/live/location/company',
+            providesTags: ['LiveLocation'],
+        }),
+        getUserLocation: builder.query({
+            query: (userId) => `/api/v1/live/location/user/${userId}`,
+            providesTags: ['LiveLocation'],
+        }),
+
+        // ── FAQs ─────────────────────────────────────────────────────────────
+        getFaqsUser: builder.query({
+            query: () => '/api/v1/faqs',
+            providesTags: ['Faq'],
+        }),
+        getFaqsAdmin: builder.query({
+            query: () => '/api/v1/admin/faqs', // Assuming admin prefix based on context
+            providesTags: ['Faq'],
+        }),
+        addUpdateFaq: builder.mutation({
+            query: (body) => ({ url: '/api/v1/faqs/add-update', method: 'POST', body }),
+            invalidatesTags: ['Faq'],
+        }),
+        getFaqById: builder.query({
+            query: (id) => `/api/v1/faqs/${id}`,
+            providesTags: (result, error, id) => [{ type: 'Faq', id }],
+        }),
+        deleteFaq: builder.mutation({
+            query: (id) => ({ url: `/api/v1/faqs/${id}`, method: 'DELETE' }),
+            invalidatesTags: ['Faq'],
+        }),
+        toggleFaq: builder.mutation({
+            query: (id) => ({ url: `/api/v1/faqs/${id}/toggle`, method: 'POST' }),
+            invalidatesTags: ['Faq'],
+        }),
+        
+        // ── Additional Items ─────────────────────────────────────────────────
+        getMyCalendarSummary: builder.query({
+            query: ({ month, year, company_id }) => `/api/v1/my-calendar/summary?month=${month}&year=${year}&company_id=${company_id}`,
+        }),
+        markAttendance: builder.mutation({
+            query: (body) => ({ url: '/api/v1/attendances/mark', method: 'POST', body }),
+            invalidatesTags: ['Attendance'],
+        }),
+        getAttendanceDateDetail: builder.query({
+            query: ({ date, company_id }) => `/api/v1/attendances/date-detail?date=${date}&company_id=${company_id}`,
+            providesTags: ['Attendance'],
+        }),
+        getAttendanceHistory: builder.query({
+            query: ({ month, year, company_id }) => `/api/v1/attendances/history?month=${month}&year=${year}&company_id=${company_id}`,
+            providesTags: ['Attendance'],
         }),
     }),
 });
@@ -675,5 +976,87 @@ export const {
     useGetAllAttendancesQuery,
     useGetAttendanceReportQuery,
     useGetAttendanceExportUrlQuery,
+
+    // NEW EXPORTS 
+    // Positions
+    useGetPositionsQuery,
+    useGetPositionByIdQuery,
+    useCreatePositionMutation,
+    useUpdatePositionMutation,
+    useDeletePositionMutation,
+    useChangePositionStatusMutation,
+
+    // Overtimes
+    useGetOvertimesQuery,
+    useCreateOvertimeMutation,
+
+    // Leaves
+    useGetLeavesQuery,
+    useApplyLeaveGlobalMutation,
+    useLeaveRequestActionMutation,
+    useGetMyLeavesSummaryQuery,
+    useGetMyLeavesHistoryQuery,
+    useApplyMyLeaveMutation,
+    useGenerateLeaveBalancesMutation,
+
+    // Block/Unblock
+    useBlockUserByIdMutation,
+    useUnblockUserByIdMutation,
+    useBlockUserInPathMutation,
+    useUnblockUserInPathMutation,
+
+    // Threads/Messages
+    useGetThreadsQuery,
+    useCreateDirectThreadMutation,
+    useCreateGroupThreadMutation,
+    useAddThreadMembersMutation,
+    useLeaveThreadMutation,
+    useGetThreadMembersQuery,
+    usePromoteThreadAdminMutation,
+    useDemoteThreadAdminIdMutation,
+    useDemoteThreadAdminMutation,
+    useGetMessagesQuery,
+    useSendMessageMutation,
+    useDeleteMessageMutation,
+    useMarkThreadReadMutation,
+    useGetMessageReadsQuery,
+
+    // Teams
+    useGetTeamsQuery,
+    useAddUpdateTeamMutation,
+    useDeleteTeamMutation,
+
+    // Holiday Calendars
+    useGetHolidayCalendarsYearQuery,
+    useAddUpdateHolidayMutation,
+    useDeleteHolidayMutation,
+
+    // Employee Salaries
+    useGetEmployeeSalariesQuery,
+    useGetEmployeeSalaryByIdQuery,
+    useAddUpdateEmployeeSalaryMutation,
+    useDeleteEmployeeSalaryMutation,
+    useGetSalarySlipPdfUrlQuery,
+    useGetSalarySlipPdfRangeUrlQuery,
+
+    // Live Location
+    usePingLocationMutation,
+    useGetMyLocationQuery,
+    useGetCompanyLocationsQuery,
+    useGetUserLocationQuery,
+
+    // FAQs
+    useGetFaqsUserQuery,
+    useGetFaqsAdminQuery,
+    useAddUpdateFaqMutation,
+    useGetFaqByIdQuery,
+    useDeleteFaqMutation,
+    useToggleFaqMutation,
+
+    // Misc
+    useGetMyCalendarSummaryQuery,
+    useMarkAttendanceMutation,
+    useGetAttendanceDateDetailQuery,
+    useGetAttendanceHistoryQuery,
 } = apiSlice;
 

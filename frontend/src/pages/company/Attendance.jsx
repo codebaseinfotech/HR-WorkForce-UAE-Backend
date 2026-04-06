@@ -15,6 +15,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import Card from '../../components/common/Card';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
+import { useAuth } from '../../contexts/AuthContext';
 
 import { useGetAttendanceReportQuery } from '../../store/apiSlice';
 
@@ -57,12 +58,15 @@ const Attendance = () => {
     const navigate = useNavigate();
     const toast = useToast();
 
+    const { user } = useAuth();
+    const companyId = user?.companyId || user?.id;
+
     const [rangeIdx, setRangeIdx] = useState(0);
     const range = RANGES[rangeIdx].key;
 
     const { data, isLoading, error, refetch, isFetching } = useGetAttendanceReportQuery(
-        { range },
-        { refetchOnMountOrArgChange: true }
+        { range, company_id: companyId },
+        { refetchOnMountOrArgChange: true, skip: !companyId }
     );
 
     const summary = data?.summary || {};

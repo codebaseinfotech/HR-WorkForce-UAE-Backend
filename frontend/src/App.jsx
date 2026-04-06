@@ -28,12 +28,15 @@ import ManagersList from './pages/company/ManagersList';
 import ManagerStaffList from './pages/company/ManagerStaffList';
 import Roles from './pages/company/Roles';
 import Permissions from './pages/company/Permissions';
+import Positions from './pages/company/Positions';
+import Teams from './pages/company/Teams';
+import HolidayCalendar from './pages/company/HolidayCalendar';
+import EmployeeSalaries from './pages/company/EmployeeSalaries';
+import LiveLocation from './pages/company/LiveLocation';
+import Chat from './pages/company/Chat';
 
 import StaffDetail from './pages/company/StaffDetail';
-import CompanyAttendance from './pages/company/CompanyAttendance';
 
-// Check-in/Check-out
-import CheckInCheckOut from './pages/dashboard/CheckInCheckOut';
 
 
 
@@ -170,6 +173,60 @@ function App() {
       />
 
       <Route
+        path="/company/positions"
+        element={
+          <ProtectedRoute path="/company/positions">
+            <Positions />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/company/teams"
+        element={
+          <ProtectedRoute path="/company/teams">
+            <Teams />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/company/holiday-calendar"
+        element={
+          <ProtectedRoute path="/company/holiday-calendar">
+            <HolidayCalendar />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/company/salaries"
+        element={
+          <ProtectedRoute path="/company/salaries">
+            <EmployeeSalaries />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/company/live-location"
+        element={
+          <ProtectedRoute path="/company/live-location">
+            <LiveLocation />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/company/chat"
+        element={
+          <ProtectedRoute path="/company/chat">
+            <Chat />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/company/permissions/:roleId"
         element={
           <ProtectedRoute path="/company/permissions/:roleId">
@@ -180,14 +237,7 @@ function App() {
 
 
 
-      <Route
-        path="/company/all-attendance"
-        element={
-          <ProtectedRoute path="/company/all-attendance">
-            <CompanyAttendance />
-          </ProtectedRoute>
-        }
-      />
+
 
       <Route
         path="/staff/list"
@@ -200,14 +250,7 @@ function App() {
 
 
 
-      <Route
-        path="/checkin-checkout"
-        element={
-          <ProtectedRoute path="/checkin-checkout">
-            <CheckInCheckOut />
-          </ProtectedRoute>
-        }
-      />
+
 
 
       {/* Default Route */}

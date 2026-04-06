@@ -1043,9 +1043,13 @@ class AttendanceController extends Controller
             'range' => 'nullable|in:today,week,month,year,last_7_days,last_30_days,last_3_months',
             'from' => 'nullable|date_format:Y-m-d',
             'to' => 'nullable|date_format:Y-m-d|after_or_equal:from',
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
         $user = Auth::user();
+        if (!empty($data['user_id'])) {
+            $user = \App\Models\User::find($data['user_id']);
+        }
 
         $filename = 'attendance_report_' . $user->id . '_' . now()->format('Ymd_His') . '.xlsx';
 
